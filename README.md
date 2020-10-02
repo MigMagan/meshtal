@@ -1,12 +1,13 @@
-# Meshtal Package
+# Meshtal Module 
 
-This is a package built for dealing with MCNP mesh tallies. It supports both
+This is a module built for dealing with MCNP mesh tallies. It supports both
 fmesh and tmesh tallies (only ASCII input), and treats them as a unified 
 object. You can read the files, merge them, add different tallies, create
 weight windows, export to VTK, plus anything that you can implement yourself.
 
-Although we have used the tools included quite a bit, Package is in very early 
-state, so there may be incompatibilites. If you use this package and find it
+We intend to put this module along with other related as a package in the
+future. Work is in very early stage, so expect bugs!
+If you use this module and find it
 useful, or have suggestion, issues, pull requests, etc, feel free to write.
 
 CONTRIBUTING
