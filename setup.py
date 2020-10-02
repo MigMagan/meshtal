@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="meshtal", 
-    version="0.0.1",
+    version="0.1.0-alpha",
     author="Miguel Magan",
     author_email="mmagan@essbilbao.org",
-    description="Module to operate with MCNP mesh tallies",
+    description="Module read and post-process MCNP mesh tallies",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/MigMagan/meshtal",
@@ -17,6 +17,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: General Public License V3", 
         "Operating System :: Linux",
+        "Development Status :: 3 - Alpha",
     ],
     python_requires='>=3.5',
 )
