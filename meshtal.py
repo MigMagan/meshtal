@@ -53,7 +53,7 @@ class MeshTally:
         self.geom = geom
         self.origin = np.zeros(3)  # Default origin is 0,0,0
         self.TR = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1],
-                           [0, 0, 0]]   )  # Tally transformation
+                            [0, 0, 0]])  # Tally transformation
         self.n = 4  # Tally number
         self.FM = 1  # Tally multiplier. I don't know how to treat this, actually...
         self.comment = 'no comment provided'  # Tally comment
@@ -79,7 +79,7 @@ class MeshTally:
                 return None
         return vol
 
-    def userrotate (self, logfile=None):
+    def userrotate(self, logfile=None):
         """Rotate a tally according to user inpute"""
         print('default TMESH origin: ', self.origin)
         print('default TMESH axis: ', self.axis)
@@ -87,25 +87,25 @@ class MeshTally:
         neworigin = self.origin
         anglemod = 0
         select = input('Do you want to modify default tmesh orientation y/n ')
-        while select not in ['y','n']:
+        while select not in ['y', 'n']:
             select = input('Choose, y o n:')
         if select == 'y':
             data = input('Enter new origin vector instead 0 0 0 using space: ')
             neworigin = float(data.split(' ')[:3])
             self.origin = neworigin
-            data=input('Enter new axis vector instead 0 0 1 using space: ')
+            data = input('Enter new axis vector instead 0 0 1 using space: ')
             newaxis = float(data.split(' ')[:3])
             self.axis = newaxis
             cosanglemod = input('Default orientation Xaxis=0 \nEnter cos of angle xx\' to rotate cilinder from default orientation ')
             anglemod = np.arccos(float(cosanglemod))*180/pi
-            
+
         if logfile is not None:
-            print('adding ', anglemod,' degrees to default cylinder kbins')
-            log_results_file=open(logfile, 'w')
+            print('adding ', anglemod, ' degrees to default cylinder kbins')
+            log_results_file = open(logfile, 'w')
             log_results_file.write('Have we modified tmesh orientation? {} \n'.format(select))
             log_results_file.write('New origin vector instead 0 0 0: {} \n'.format(neworigin))
             log_results_file.write('New axis vector instead 0 0 1: {} \n'.format(newaxis))
-            log_results_file.write('New cosine XX\' (Xaxis X\' orientation instead 0 degrees): {0} ({1} degrees)\n '.format(cosanglemod,anglemod))
+            log_results_file.write('New cosine XX\' (Xaxis X\' orientation instead 0 degrees): {0} ({1} degrees)\n '.format(cosanglemod, anglemod))
             log_results_file.close()
 # ======================= END OF CLASS DEFINITION ==========================
 
@@ -141,10 +141,10 @@ def fgettally(tallystr):
     n = line.split()[-1]
 
     line = next(data)
-    if  line[0:5]=='     ':  # 5 blank spaces is how the next file is identified as a comment
+    if  line[0:5] == '     ':  # 5 blank spaces is how the next file is identified as a comment
         comment = line
         line = next(data)
-        print ('comment:', comment)
+        print('comment:', comment)
     else:
         comment = None
 
@@ -163,14 +163,14 @@ def fgettally(tallystr):
         return None
     line = next(data)
     words = line.split()
-    if words[0]=="origin": # This is a cylindrical tally
+    if words[0] == "origin": # This is a cylindrical tally
         Ttype = "Cyl"
         location = words[2:] #variable descripting the cylinder origin and orientation. Important!!
         line = next(data)
         words = line.split()
         print('tally location string', location)
 
-    if words[0]=="X":
+    if words[0] == "X":
         Ttype = "XYZ"
     ibinlist = words[2:]
     ibins = [float(i) for i in ibinlist]
@@ -186,10 +186,10 @@ def fgettally(tallystr):
 
     line = next(data)
     words = line.split()
-    if Ttype=="XYZ":
+    if Ttype == "XYZ":
         kbinlist = words[2:]
 
-    elif Ttype=="Cyl":
+    elif Ttype == "Cyl":
         kbinlist = words[3:]
     else:
         print ("Tally does not seem rectangular nor cylindrical.\
@@ -215,18 +215,18 @@ def fgettally(tallystr):
     line = next(data)  # Assert this is going as intended TODO: Support
                              # for time tallies is possible!
     header = line.split()
-    if Ttype=="XYZ":
-        assert header[-4]=='Z'
+    if Ttype == "XYZ":
+        assert header[-4] == 'Z'
     else:
-        assert header[-4]=='Th'
-        assert header[-3]=='Result'
-        assert header[-1]=='Error'
+        assert header[-4] == 'Th'
+        assert header[-3] == 'Result'
+        assert header[-1] == 'Error'
 
     for e in range(eints):
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
-            tally.value[i,j,k,e+1] = line.split()[-2]
-            tally.error[i,j,k,e+1] = line.split()[-1]
+            tally.value[i, j, k, e+1] = line.split()[-2]
+            tally.error[i, j, k, e+1] = line.split()[-1]
     # We now have the values for the energy bins, but we are missing the totals.
     # This changes depending on wether we have
     # a single energy bin (eints=1) or more
@@ -257,7 +257,7 @@ def fget(n, infile='meshtal'):
             if "Mesh Tally Number" in lines and str(n) == lines.split()[-1]:
                 print("Found tally", n)
                 tallystr1 = [lines]
-                tallystr2 =  [lines for lines in MeshtalFile]
+                tallystr2 = [lines for lines in MeshtalFile]
                 break
         else:
             print("Tally {0:d} not found".format(n))
@@ -275,7 +275,7 @@ def fget(n, infile='meshtal'):
     return tally
 
 
-def fgetall(infile = 'meshtal'):
+def fgetall(infile='meshtal'):
     """ Returns an array with all the mesh tallies in ifile """
     nlist = flist(infile)
     print('Found tallies:')
@@ -297,7 +297,7 @@ def fgetall(infile = 'meshtal'):
 
 
     tallystr = [alltallystr[i:j] for i, j in zip(spltline, spltline[1:]+[len(alltallystr)])]
-    tallylist=[]
+    tallylist = []
 
     for t in tallystr:
         tallylist.append(fgettally(t))
@@ -331,9 +331,9 @@ def tgetall(tfile):
             lines = meshtalfile.readline()
             valores = lines.split()
             print(int(valores[0]))
-            if int( valores[0]) // 10 ==1:
+            if int( valores[0]) // 10 == 1:
                 GEOM = "XYZ"
-            elif int(valores[0]) // 10 ==2:
+            elif int(valores[0]) // 10 == 2:
                 GEOM = "Cyl"
             else:
                 print("Unknown geometry type for tally", tally)
@@ -384,7 +384,7 @@ def tgetall(tfile):
             lines = meshtalfile.readline()
             valores = lines.split()
 
-            if tallylist[tally].geom=="XYZ":
+            if tallylist[tally].geom == "XYZ":
                 tallylist[tally].kbins = [float(kbin) for kbin in valores]
             if tallylist[tally].geom=="Cyl":
                 tallylist[tally].kbins[1:] = [float(kbin)/360 for kbin in valores]
@@ -398,10 +398,10 @@ def tgetall(tfile):
                 valores = lines.split()
                 error[:, j, k] = [float(number) for number in valores]
 
-            tallylist[tally].value[:,:,:,0] = value
-            tallylist[tally].value[:,:,:,1] = value
-            tallylist[tally].error[:,:,:,0] = error
-            tallylist[tally].error[:,:,:,1] = error
+            tallylist[tally].value[:, :, :, 0] = value
+            tallylist[tally].value[:, :, :, 1] = value
+            tallylist[tally].error[:, :, :, 0] = error
+            tallylist[tally].error[:, :, :, 1] = error
             tallylist[tally].nps = nps
             tallylist[tally].comment = comment
 
@@ -413,7 +413,7 @@ def copy(basetally, exclude=None):
     returns a copy of basetally, except for the parameters in exclude.
     Notice that the spatial and energy ints can not be excluded.
     """
-    result = MeshTally(basetally.iints,basetally.jints,basetally.kints,basetally.eints)
+    result = MeshTally(basetally.iints, basetally.jints, basetally.kints, basetally.eints)
     for var in vars(basetally):
         if var not in exclude:
             vars(result)[var] = vars(basetally)[var]
@@ -482,11 +482,11 @@ def Geoeq(*tallies):
             print("Argument #{0} is not a meshtally object".format(index))
             return False
     for tally in tallies[1:]:
-        if (tally.ibins!=tallies[0].ibins).all():
+        if (tally.ibins != tallies[0].ibins).all():
             return False
-        if (tally.jbins!=tallies[0].jbins).all():
+        if (tally.jbins != tallies[0].jbins).all():
             return False
-        if (tally.kbins!=tallies[0].kbins).all():
+        if (tally.kbins != tallies[0].kbins).all():
             return False
     return True
 
@@ -657,16 +657,16 @@ def vtkwrite(meshtal, ofile):
                                 VTKFile.write ('{valor} '.format(valor=error[i,j,k,e]))
                     VTKFile.write('\n')
     else:
-        print ("I do not know this mesh tally geometry. Quitting, sorry.")
+        print("I do not know this mesh tally geometry. Quitting, sorry.")
 
 
 def ecollapse(meshtal, ebinmap):
-    """Collapses the energy groups in meshtal acording to integer list 
+    """Collapses the energy groups in meshtal acording to integer list
        or array ebinmap.
        WARNING: Error calculations are mere aproximation. Information is lost in
        the process and the actual error CAN NOT be calculated
     """
-    if sum(ebinmap)!=meshtal.eints:
+    if sum(ebinmap) != meshtal.eints:
         print("energy bin map does not match mesh tally energy bins, cancelling")
         return
     result = copy(meshtal, exclude =['error', 'value','ebins'])
@@ -688,8 +688,8 @@ def ecollapse(meshtal, ebinmap):
         result.error[:, :, :, e+1] = adderr
         pos = pos+ebinmap[e] # Move to next block of energy bins.
  
-    result.value[:,:,:,0] = meshtal.value[:,:,:,0] # Total does not change
-    result.error[:,:,:,0] = meshtal.error[:,:,:,0] # Total does not change
+    result.value[:, :, :, 0] = meshtal.value[:, :, :, 0]  # Total does not change
+    result.error[:, :, :, 0] = meshtal.error[:, :, :, 0]  # Total does not change
     result.comment = ("{A}, with collapsed energies as {B}".format(A=meshtal.comment[:-1], B=ebinmap))
     return result
 
@@ -714,17 +714,17 @@ def merge(*meshtalarray):
         w = []
         for tally in meshtalarray:
             mergeval = tally.value[i,j,k,e]*tally.nps+mergeval
-            w0 = tally.nps*(tally.nps*tally.error[i,j,k,e]**2+1)*tally.value[i,j,k,e]**2   
+            w0 = tally.nps*(tally.nps*tally.error[i, j, k, e]**2+1)*tally.value[i, j, k, e]**2
             w.append(w0)
             result.value[i,j,k,e] = mergeval/nps
-            if mergeval!=0:
-                result.error[i,j,k,e] = sqrt ((sum(w)/nps-mergeval**2/nps**2)/(mergeval**2/nps))
+            if mergeval != 0:
+                result.error[i, j, k, e] = sqrt ((sum(w)/nps-mergeval**2/nps**2)/(mergeval**2/nps))
             else:
-                result.error[i,j,k,e] = 0
+                result.error[i, j, k, e] = 0
     return result
 
 
-def voxelmerge(meshtal,voxelmap):
+def voxelmerge(meshtal, voxelmap):
     """ Merge voxels of meshtal according to numpy array voxelmap. Returns a dictionary with value and error arrays which are analogous to a single cell mesh tally.
         WARNING:Becuase tally contributions to different cell often come from the same event, information is lost and errors are a mere aproximation. Use with caution!! 
         Voxelmap must be a 3x2 map stating the    subset of voxels to merge
@@ -791,12 +791,12 @@ def xyzput(tally,ofile):
                         Y = (tally.jbins[j]+tally.jbins[j+1])/2
                         Z = (tally.kbins[k]+tally.kbins[k+1])/2
                         XYZ = [X,Y,Z]+tally.origin
-                    putfile.write("{0} {1} {2} {3}\n".format(XYZ[0],XYZ[1],XYZ[2],tally.value[i,j,k,-1]))   
+                    putfile.write("{0} {1} {2} {3}\n".format(XYZ[0],XYZ[1],XYZ[2],tally.value[i,j,k,-1]))
 
 
 def fput(tallylist,ofile):
     """Write a meshtal file ofile with the data of tallylist. ProbID and nps MUST match""" 
-    print ("Not implemented. You are welcome to do it yourself!")
+    print("Not implemented. You are welcome to do it yourself!")
     for tally in tallylist:
         for e in tally.eints:
             for i in tally.iints:
@@ -806,8 +806,8 @@ def fput(tallylist,ofile):
 
 
 def wwrite_auto(ofile='wwout_auto',*tallies):
-   wwrite(ofile,None,None,0,*tallies)
-   return
+    wwrite(ofile,None,None,0,*tallies)
+    return
 
 # def wwrite(*tallies,ofile='wwout',scale=None,wmin=None):
 def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies): 
@@ -839,10 +839,10 @@ def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies):
     # Check
     print([tal.part for tal in tallies])
 
-    if scale==None:  # 
-        scale=np.zeros(len(tallies))
-        wmin=np.zeros(len(tallies))
-        for i,tally in enumerate(tallies):
+    if scale == None:  # 
+        scale = np.zeros(len(tallies))
+        wmin = np.zeros(len(tallies))
+        for i, tally in enumerate(tallies):
             maxval=tally.value.max()
             midval=HealthReport(tally)['mingood']
             lowval=HealthReport(tally)['minrel']
@@ -1098,6 +1098,7 @@ def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies):
                 ntal=ntal+1
     
     return
+
 
 def RoMesh(Tally,ptrac_file,outp_file,dumpfile=None):  #TODO Should be in different module
     """Calculate the density in the meshtal Tally voxels using ptrac_file and outp_file.
@@ -1519,12 +1520,12 @@ def SEAM(*meshtalarray):
   
     # Now the results and errors
     for i in range(basetally.iints):
-        for j in range (basetally.jints):
-            for k in range (basetally.kints): 
-                for e in range (basetally.eints+1): 
-                    print(i,j,k,e)
-                    errors = [tally.error[i,j,k,e] for tally in meshtalarray]
-                    values = [tally.value[i,j,k,e] for tally in meshtalarray]
+        for j in range(basetally.jints):
+            for k in range(basetally.kints): 
+                for e in range(basetally.eints+1): 
+                    print(i, j, k, e)
+                    errors = [tally.error[i, j, k, e] for tally in meshtalarray]
+                    values = [tally.value[i, j, k, e] for tally in meshtalarray]
                     mergeval = 0
                     mergeerr = 0  # TODO: This does NOT seem well thought, review algo
                     totalweight = 0
