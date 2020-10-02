@@ -238,12 +238,13 @@ def fgettally(tallystr):
             line = next(data)
             tally.value[i, j, k, 0] = line.split()[-2]
             tally.error[i, j, k, 0] = line.split()[-1]
-    if type=="Cyl":
-        tally.origin = location[0:3]
+    if Ttype=="Cyl":
+        tally.geom = "Cyl"
+        tally.origin = [float(l) for l in location[0:3]]
         tally.origin = np.asarray(tally.origin)
-        tally.axis = location[5:8]
+        tally.axis = [float(l) for l in location[5:8]]
         tally.axis = np.asarray(tally.axis)
-        tally.vec = location[11:14]
+        tally.vec = [float(l) for l in location[11:14]]
         tally.vec = np.asarray(tally.vec)
     return tally
 
