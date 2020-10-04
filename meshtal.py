@@ -575,31 +575,15 @@ def vtkwrite(meshtal, ofile):
                     VTKFile.write('\n')
 
     elif meshtal.geom=="Cyl":
+        angles = np.diff(meshtal.kbins)
+        if max(angles) > 0.1666:
+            print (' Smoothing angles above 60º.\n')
+        smoothed_tally = meshtal.smoothang(0.166)
+        kints = smoothed_tally.kints
+        kbins = smoothed_tally.kbins  # we call the smoothing anyway, easier code that way
+        value = smoothed_tally.value
+        error = smoothed_tally.error
         with open (ofile,"w") as VTKFile:
-            angles=np.diff(meshtal.kbins)
-            if max(angles)>0.1666:  # TODO: Definitely put this as a separate function
-                print ('WARNING: Some angles are above 60º. Expect seriously distorted results for those bins. This may be acceptable if you do not actually want those results\n')
-# by OGM # 
-                kbins = []
-                for k, kbin in enumerate(meshtal.kbins[:-1]):
-                    val = meshtal.valuei[:, :, k, :]
-                    error = meshtal.error[:,:,k,:]
-                    kbins.append(kbin)
-                    if (angles[k]) >= 0.1666 :
-                        interp = angles // 0.1666
-                        for i in range(interp):
-                            kbins.append(kbin+angles[k]*(i+1)/(interp+1))
-                            meshtal.value = np.insert(meshtal.value, len(kbins), val, axis=2)
-                            meshtal.value = np.insert(meshtal.error, len(kbins), error, axis=2)  # TODO: Check, not sure 
-                kbins.append(meshtal.kbins[-1])
-                kints = len(kbins)-1
-            else:  # TODO: Probably better to do nothing.
-                kbins = meshtal.kbins
-                kints = meshtal.kints    
-                value = meshtal.value
-                error = meshtal.error
-
-
             VTKFile.write('# vtk DataFile Version 3.0\n'
                    '{ProbID} vtk output\n'
                    'ASCII\n'
