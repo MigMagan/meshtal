@@ -130,8 +130,8 @@ class MeshTally:
             kindex.extend([i]*(ipoint+1))
         kbins = np.append(kbins, self.kbins[-1])  # Final angle bin is not in previous loop
 
-        val = np.zeros((self.iints, self.jints, kbins.shape[0], self.eints + 1))
-        err = np.zeros((self.iints, self.jints, kbins.shape[0], self.eints + 1))
+        val = np.zeros((self.iints, self.jints, kbins.shape[0] - 1, self.eints + 1))
+        err = np.zeros((self.iints, self.jints, kbins.shape[0] - 1, self.eints + 1))
         for k, ki in enumerate(kindex):
             val[:, :, k, :] = self.value[:, :, ki, :]
             err[:, :, k, :] = self.error[:, :, ki, :]
