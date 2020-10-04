@@ -527,67 +527,63 @@ def Geoeq(*tallies):
 
 def vtkwrite(meshtal, ofile):
     """create an vtk file ofile from tally meshtal"""
-    if meshtal.eints==1:
+    if meshtal.eints == 1:
         NFields = 2
     else:
         NFields = 2*meshtal.eints+2
     vtk_name = ofile[:-4]   # TODO: Pardon me?
-
-    if meshtal.geom=="XYZ":
-        with open (ofile,"w") as VTKFile:
-            VTKFile.write('# vtk DataFile Version 3.0\n'
-                          '{ProbID} vtk output\n'
-                          'ASCII\n'
-                          'DATASET RECTILINEAR_GRID\n'.format(ProbID=meshtal.probID))
-            VTKFile.write('DIMENSIONS {X} {Y} {Z}\n'.format(X=meshtal.iints+1, Y=meshtal.jints+1, Z=meshtal.kints+1))
+    nvoxels = meshtal.iints * meshtal.jints * meshtal.kints  # Total number of voxels
+    with open(ofile,"w") as VTKFile:
+        VTKFile.write('# vtk DataFile Version 3.0\n'
+                      '{ProbID} vtk output\n'
+                      'ASCII\n'.format(ProbID=meshtal.probID))
+    if meshtal.geom == "XYZ":
+        with open(ofile,"w") as VTKFile:
+            VTKFile.write('DATASET RECTILINEAR_GRID\n')
+            VTKFile.write('DIMENSIONS {X} {Y} {Z}\n'.format(X=meshtal.iints+1, Y=meshtal.jints+1,
+                                                            Z=meshtal.kints+1))
             VTKFile.write('X_COORDINATES {X} float\n'.format(X=meshtal.iints+1))
-            for i in meshtal.ibins:
-                VTKFile.write('{corx}\n'.format(corx=i))
+            VTKFile.writelines(["{0}\n".format(i) for i in meshtal.ibins])
             VTKFile.write('Y_COORDINATES {Y} float\n'.format(Y=meshtal.jints+1))
-            for i in meshtal.jbins:
-                VTKFile.write('{cory}\n'.format(cory=i))
+            VTKFile.writelines(["{0}\n".format(j) for j in meshtal.jbins])
             VTKFile.write('Z_COORDINATES {Z} float\n'.format(Z=meshtal.kints+1))
-            for i in meshtal.kbins:
-                VTKFile.write('{corz}\n'.format(corz=i))
-        
+            VTKFile.writelines(["{0}\n".format(k) for k in meshtal.kbins])
+
             VTKFile.write('CELL_DATA {N}\n'.format(N=(meshtal.iints)*(meshtal.jints)*(meshtal.kints)))
-            VTKFile.write ('FIELD FieldData {N} \n'.format(N=NFields))
-           
-            VTKFile.write ('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,N=meshtal.iints*meshtal.jints*meshtal.kints))
+            VTKFile.write('FIELD FieldData {N} \n'.format(N=NFields))
+
+            VTKFile.write ('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
             for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal.iints):
-                VTKFile.write ('{valor} '.format(valor=meshtal.value[i,j,k,0]))
-            VTKFile.write('\n')
-        
-            VTKFile.write('TotalError_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,N=(meshtal.iints*meshtal.jints*meshtal.kints)))
-            for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal. iints):
-                VTKFile.write ('{valor} '.format(valor=meshtal.error[i,j,k,0]))
+                VTKFile.write('{valor} '.format(valor=meshtal.value[i, j, k, 0]))
             VTKFile.write('\n')
 
-            if meshtal.eints>1: # We need to make the energy bins values
+            VTKFile.write('TotalError_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,N=nvoxels))
+            for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal. iints):
+                VTKFile.write('{valor} '.format(valor=meshtal.error[i, j, k, 0]))
+            VTKFile.write('\n')
+
+            if meshtal.eints > 1:  # We need to make the energy bins values
                 for e in range(1, meshtal.eints+1):
-                    VTKFile.write('Tally{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,E1=meshtal.ebins[e-1],E2=meshtal.ebins[e],N=(meshtal.iints*meshtal.jints*meshtal.kints)))
+                    VTKFile.write('Tally{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,E1=meshtal.ebins[e-1],E2=meshtal.ebins[e],N=nvoxels))
                     for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal.iints): 
                         VTKFile.write ('{valor} '.format(valor=meshtal.value[i, j, k, e]))
                     VTKFile.write('\n')
-                    VTKFile.write('Error{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,E1=meshtal.ebins[e-1],E2=meshtal.ebins[e],N=(meshtal.iints*meshtal.jints*meshtal.kints)))
+                    VTKFile.write('Error{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,E1=meshtal.ebins[e-1],E2=meshtal.ebins[e],N=nvoxels))
                     for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal.iints): 
                         VTKFile.write ('{valor} '.format(valor=meshtal.error[i, j, k, e]))
                     VTKFile.write('\n')
 
-    elif meshtal.geom=="Cyl":
+    elif meshtal.geom == "Cyl":
         angles = np.diff(meshtal.kbins)
         if max(angles) > 0.1666:
-            print (' Smoothing angles above 60º.\n')
+            print (' Smoothing angles above 60º\n')
         smoothed_tally = meshtal.smoothang(0.166)
         kints = smoothed_tally.kints
         kbins = smoothed_tally.kbins  # we call the smoothing anyway, easier code that way
         value = smoothed_tally.value
         error = smoothed_tally.error
         with open (ofile,"w") as VTKFile:
-            VTKFile.write('# vtk DataFile Version 3.0\n'
-                   '{ProbID} vtk output\n'
-                   'ASCII\n'
-                   'DATASET STRUCTURED_GRID\n'.format(ProbID=meshtal.probID))
+            VTKFile.write('DATASET STRUCTURED_GRID\n')
             VTKFile.write('DIMENSIONS {Z} {Y} {X}\n'.format(X=meshtal.iints+1,Y=meshtal.jints+1,Z=kints+1))
 # I'm keeping it because it produces a strange result I totally need to understand
 #       VTKFile.write('Points {Npoint} float\n'.format(Npoint=meshtal.iints+1)*(meshtal.jints+1)*(kints+1))
