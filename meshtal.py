@@ -1,6 +1,6 @@
 """Mesh tally module."""
 
-from math import cos, sin, pi, sqrt, log, atan
+from math import cos, sin, pi, sqrt, log, atan2
 import numpy as np
 # from pylab import *
 
