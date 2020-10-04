@@ -1,6 +1,6 @@
 """Mesh tally module."""
 
-from math import cos, sin, pi, sqrt, log
+from math import cos, sin, pi, sqrt, log, atan
 import numpy as np
 # from pylab import *
 
@@ -575,7 +575,6 @@ def vtkwrite(meshtal, ofile):
                     VTKFile.write('\n')
 
     elif meshtal.geom=="Cyl":
-        import math 
         with open (ofile,"w") as VTKFile:
             angles=np.diff(meshtal.kbins)
             if max(angles)>0.1666:  # TODO: Definitely put this as a separate function
@@ -646,7 +645,7 @@ def vtkwrite(meshtal, ofile):
             if meshtal.ibins[0]==0:  # TODO: Overall, this looks awful, dear past self. 
                 for j in range(meshtal.jints+1):
                     for k in range(kints+1):
-                        points[0,j,k] = 1E-3*(math.cos(kbins[k]*2*math.pi)*XVEC2+math.sin(kbins[k]*2*math.pi)*YVEC2)+meshtal.jbins[j]*AXS2+TR_mesh[3]
+                        points[0,j,k] = 1E-3*(cos(kbins[k]*2*pi)*XVEC2+sin(kbins[k]*2*pi)*YVEC2)+meshtal.jbins[j]*AXS2+TR_mesh[3]
                         VTKFile.write(' {0:E} {1:E} {2:E}\n'.format(points[0,j,k,0],points[0,j,k,1],points[0,j,k,2]))
                 iteribins = range(1,meshtal.iints+1)
             else:
@@ -655,7 +654,7 @@ def vtkwrite(meshtal, ofile):
             for i in iteribins:
                 for j in range(meshtal.jints+1):
                     for k in range(kints+1):
-                        points[i,j,k]=meshtal.ibins[i]*(math.cos(kbins[k]*2*math.pi)*XVEC2+math.sin(kbins[k]*2*math.pi)*YVEC2)+meshtal.jbins[j]*AXS2+TR_mesh[3]
+                        points[i,j,k]=meshtal.ibins[i]*(cos(kbins[k]*2*pi)*XVEC2+sin(kbins[k]*2*pi)*YVEC2)+meshtal.jbins[j]*AXS2+TR_mesh[3]
                         VTKFile.write(' {0:E} {1:E} {2:E}\n'.format(points[i,j,k,0],points[i,j,k,1],points[i,j,k,2]))
             VTKFile.write('CELL_DATA {N}\n'.format(N=(meshtal.iints)*(meshtal.jints)*(kints)))
             VTKFile.write ('FIELD FieldData {N} \n'.format(N=NFields))
@@ -1263,7 +1262,6 @@ def RoMesh(Tally,ptrac_file,outp_file,dumpfile=None):  #TODO Should be in differ
 
 
 def conv_Cilind(Axs, Vec, origin, XYZ):
-    import math
     if len(XYZ)!=3:
         print("input coordinate not a Triad")
         return
@@ -1285,21 +1283,20 @@ def conv_Cilind(Axs, Vec, origin, XYZ):
     L2 = np.dot(XYZ,XYZ)
     Z = np.dot(XYZ,Axs)
     R2 = L2-pow(Z,2)
-    R=math.sqrt(R2)
+    R = sqrt(R2)
 
     Radial = XYZ-Axs*Z
     X = np.dot(Radial,Vec)
     YVec = np.cross(Axs,Vec)
     Y = np.dot(Radial,YVec)
-    Theta = math.atan2(Y,X)
+    Theta = atan2(Y,X)
     if Theta<0:
-        Theta = Theta+2*math.pi
-    Theta = Theta/(2*math.pi)  # Because Numpy gives the results in radian and we want revolutions...
+        Theta = Theta+2*pi
+    Theta = Theta/(2*pi)  # Because Numpy gives the results in radian and we want revolutions...
     return(R, Z, Theta)
 
 
 def conv_Cilindricas_multi(Axs,Vec,origin,XYZ):   #TODO: Should use the above function in loop
-    import math
     if len(Vec)!=3:
         print("Vector coordinate not a Triad")
         return
@@ -1323,9 +1320,9 @@ def conv_Cilindricas_multi(Axs,Vec,origin,XYZ):   #TODO: Should use the above fu
         Radial = point-np.multiply(Axs,Z)
         X = np.dot(Radial,Vec)
         Y = np.dot(Radial,YVec)
-        Theta = math.atan2(Y,X)
-        R = math.sqrt(R2)
-        Theta = Theta/(2*math.pi)  # Because Numpy gives the results in radian and we want revolutions...
+        Theta = atan2(Y,X)
+        R = sqrt(R2)
+        Theta = Theta/(2*pi)  # Because Numpy gives the results in radian and we want revolutions...
         if Theta<0:
             Theta=Theta+1
         Transformed.append([R,Z,Theta])
