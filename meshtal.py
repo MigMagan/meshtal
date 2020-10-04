@@ -107,8 +107,42 @@ class MeshTally:
             log_results_file.write('New axis vector instead 0 0 1: {} \n'.format(newaxis))
             log_results_file.write('New cosine XX\' (Xaxis X\' orientation instead 0 degrees): {0} ({1} degrees)\n '.format(cosanglemod, anglemod))
             log_results_file.close()
-# ======================= END OF CLASS DEFINITION ==========================
 
+
+    def smoothang(self, maxangle):
+        """
+        In-place smoothing of the angular bins.
+
+        Parameters
+        ----------
+        maxangle : float
+            Maximum angle allowed for the theta division, in deg
+
+        Returns:  None.
+        """
+        angles = np.diff(self.kbins)
+        ipoints = np.array(angles // maxangle, dtype=int)  # interpolation points in bins
+        kbins = np.zeros(0)
+        kindex = []
+        for i, ipoint in enumerate(ipoints):
+            newkbins = np.linspace(self.kbins[i], self.kbins[i+1], ipoint+1, endpoint=False)
+            kbins = np.append(kbins, newkbins)
+            kindex.extend([i]*(ipoint+1))
+        kbins = np.append(kbins, self.kbins[-1])  # Final angle bin is not in previous loop
+
+        val = np.zeros((self.iints, self.jints, kbins.shape[0], self.eints + 1))
+        err = np.zeros((self.iints, self.jints, kbins.shape[0], self.eints + 1))
+        for k, ki in enumerate(kindex):
+            val[:, :, k, :] = self.value[:, :, ki, :]
+            err[:, :, k, :] = self.error[:, :, ki, :]
+
+        result = copy(self, exclude=['kbins', 'value', 'error'])
+        result.kbins = kbins
+        result.value = val
+        result.error = err  # TODO: Check, not sure
+        result.kints = len(kbins)-1
+        return result
+# ======================= END OF CLASS DEFINITION ==========================
 
 def flist(infile='meshtal'):
     """ Get the tally numbers for all mesh tallies present in infile """
