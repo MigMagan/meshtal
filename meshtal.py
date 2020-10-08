@@ -84,28 +84,32 @@ class MeshTally:
         print('default TMESH origin: ', self.origin)
         print('default TMESH axis: ', self.axis)
         newaxis = self.axis
+        newvec = self.vec
         neworigin = self.origin
         anglemod = 0
         select = input('Do you want to modify default tmesh orientation y/n ')
         while select not in ['y', 'n']:
             select = input('Choose, y o n:')
         if select == 'y':
-            data = input('Enter new origin vector instead 0 0 0 using space: ')
-            neworigin = float(data.split(' ')[:3])
-            self.origin = neworigin
-            data = input('Enter new axis vector instead 0 0 1 using space: ')
-            newaxis = float(data.split(' ')[:3])
-            self.axis = newaxis
-            cosanglemod = input('Default orientation Xaxis=0 \nEnter cos of angle xx\' to rotate cilinder from default orientation ')
-            anglemod = np.arccos(float(cosanglemod))*180/pi
-
+            updatearray(neworigin)
+            updatearray(newaxis)
+            updatearray(newvec)
+            projection = np.dot(newvec, newaxis)/np.linalg.norm(newaxis)**2
+            newvec = newvec - projection*newaxis
+            if np.linalg.norm(newvec) == 0:
+                print('Fatal: VEC is 0 0 0')
+                select = 'n'
+            else:    
+                self.origin = neworigin
+                self.axis = newaxis/np.linalg.norm(newaxis)
+                self.vec = newvec/np.linalg.norm(newvec)
         if logfile is not None:
             print('adding ', anglemod, ' degrees to default cylinder kbins')
             log_results_file = open(logfile, 'w')
             log_results_file.write('Have we modified tmesh orientation? {} \n'.format(select))
-            log_results_file.write('New origin vector instead 0 0 0: {} \n'.format(neworigin))
-            log_results_file.write('New axis vector instead 0 0 1: {} \n'.format(newaxis))
-            log_results_file.write('New cosine XX\' (Xaxis X\' orientation instead 0 degrees): {0} ({1} degrees)\n '.format(cosanglemod, anglemod))
+            log_results_file.write('New origin vector instead 0 0 0: {} \n'.format(self.origin))
+            log_results_file.write('New axis vector instead 0 0 1: {} \n'.format(self.axis))
+            log_results_file.write('New  XX\' {0}\n '.format(self.vec))
             log_results_file.close()
 
 
