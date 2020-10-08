@@ -446,6 +446,15 @@ def tgetall(tfile):
     return tallylist
 
 
+def updatearray(inparray, name=''):
+    """Auxiliary to update an array with user input"""
+    arsize = len(inparray)
+    data = input('Enter new {0} vector instead of {1} using space: '.format(name, inparray))
+    try:
+        inparray[:] =[float(d) for d in data.split(' ')[:arsize]]
+    except:
+        print('Invalid input, keeping {0}'.format(name))
+
 def copy(basetally, exclude=None):
     """
     returns a copy of basetally, except for the parameters in exclude.
