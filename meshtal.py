@@ -99,7 +99,7 @@ class MeshTally:
             if np.linalg.norm(newvec) == 0:
                 print('Fatal: VEC is 0 0 0')
                 select = 'n'
-            else:    
+            else:
                 self.origin = neworigin
                 self.axis = newaxis/np.linalg.norm(newaxis)
                 self.vec = newvec/np.linalg.norm(newvec)
@@ -194,7 +194,7 @@ def fgettally(tallystr):
         line = next(data)
     line = next(data)
  # TODO: Apparently, Tally multipliers are here, but I don't have a good one
-    if line!=' Tally bin boundaries:\n':
+    if line != ' Tally bin boundaries:\n':
         print(line)
         print("Uh, uh, tally boundaries not found.\
               Quitting, because this is not really what I expected")
@@ -216,7 +216,7 @@ def fgettally(tallystr):
     line = next(data)
     words = line.split()
 
-    if words[0]=="Z":
+    if words[0] == "Z":
         Ttype = "Cyl"
     jbinlist = words[2:]
     jbins = [float(j) for j in jbinlist]
@@ -230,7 +230,7 @@ def fgettally(tallystr):
     elif Ttype == "Cyl":
         kbinlist = words[3:]
     else:
-        print ("Tally does not seem rectangular nor cylindrical.\
+        print("Tally does not seem rectangular nor cylindrical.\
                Quitting because I don't know what is this...")
         return None
 
@@ -268,7 +268,7 @@ def fgettally(tallystr):
     # We now have the values for the energy bins, but we are missing the totals.
     # This changes depending on wether we have
     # a single energy bin (eints=1) or more
-    if eints==1:
+    if eints == 1:
         tally.value[:, :, :, 0] = tally.value[:, :, :, 1]
         tally.error[:, :, :, 0] = tally.error[:, :, :, 1]
     else:
@@ -276,7 +276,7 @@ def fgettally(tallystr):
             line = next(data)
             tally.value[i, j, k, 0] = line.split()[-2]
             tally.error[i, j, k, 0] = line.split()[-1]
-    if Ttype=="Cyl":
+    if Ttype == "Cyl":
         tally.geom = "Cyl"
         tally.origin = [float(l) for l in location[0:3]]
         tally.origin = np.asarray(tally.origin)
@@ -348,14 +348,14 @@ def fgetall(infile='meshtal'):
 def tgetall(tfile):
     """ Get all the mesh tallies from the gridconv file tfile"""
     try:
-        tmesh = open(tfile,"r")
+        tmesh = open(tfile, "r")
     except OSError:
         print('cannot open file', tfile)
         return
     else:
         tmesh.close()
 
-    with open(tfile,"r") as meshtalfile:
+    with open(tfile, "r") as meshtalfile:
         comment = meshtalfile.readline()
         lines = meshtalfile.readline()
         valores = lines.split()
@@ -380,9 +380,9 @@ def tgetall(tfile):
             part = revIPT[parttype]
             iints = int(valores[2])-1
             jints = int(valores[3])-1
-            if GEOM=="XYZ":
+            if GEOM == "XYZ":
                 kints = int(valores[4])-1
-            if GEOM=="Cyl":
+            if GEOM == "Cyl":
                 kints = int(valores[4])
             eints = 1 # TMeshes only seem capable of 1 energy bin.
             ngrids = int(valores[5]) # TODO: This value is actually the number of meshes (I think),
@@ -490,7 +490,7 @@ def HealthReport(tally, ebin=0):
     maxVal = value[:, :, :].max()
     minVal = value[:, :, :].min()
 
-    thresolds = [0.1,0.2,0.5]
+    thresolds = [0.1, 0.2, 0.5]
     mingoodval = []
     indexs = []
     for thresold in thresolds:
@@ -499,7 +499,7 @@ def HealthReport(tally, ebin=0):
         mingoodval.append(min([value[i] for i in index]))
 
     Nonzeros = np.count_nonzero(value[:, :, :])
-    Fraction = Nonzeros/value[:, :, :].size 
+    Fraction = Nonzeros/value[:, :, :].size
 
     print("Maximum value is {0:E}\n".format(maxVal))
     print("Minumum good value is {0:E} \n".format(mingoodval[0]))
@@ -507,7 +507,7 @@ def HealthReport(tally, ebin=0):
     print("Tally nonzero elements are {0:.2%}\n".format(Fraction))
 
     for i, j in enumerate(thresolds):
-        if colour==False:
+        if colour == False:
             print("{0:.2%} voxels are below {1:.2F} error\n".format(len(indexs[i])/value.size, j))
         else:
             ratio = len(indexs[i])/value.size
@@ -626,7 +626,7 @@ def ecollapse(meshtal, ebinmap):
     if sum(ebinmap) != meshtal.eints:
         print("energy bin map does not match mesh tally energy bins, cancelling")
         return
-    result = copy(meshtal, exclude =['error', 'value','ebins'])
+    result = copy(meshtal, exclude=['error', 'value', 'ebins'])
     result.eints = len(ebinmap)-1
     energies = np.zeros(result.eints+1) # ebin for new tally
     energies[0] = meshtal.ebins[0]
@@ -643,23 +643,24 @@ def ecollapse(meshtal, ebinmap):
         addvaldiv = np.where(addval!=0, addval, 1)  # We do this to avoid dividing by zero for blank values
         adderr = np.sqrt(np.sum(arrayadderr, axis=0)/(addvaldiv**2))
         result.error[:, :, :, e+1] = adderr
-        pos = pos+ebinmap[e] # Move to next block of energy bins.
+        pos = pos+ebinmap[e]  # Move to next block of energy bins.
  
     result.value[:, :, :, 0] = meshtal.value[:, :, :, 0]  # Total does not change
     result.error[:, :, :, 0] = meshtal.error[:, :, :, 0]  # Total does not change
-    result.comment = ("{A}, with collapsed energies as {B}".format(A=meshtal.comment[:-1], B=ebinmap))
+    result.comment = "{A}, with collapsed energies as {B}".format(A=meshtal.comment[:-1], B=ebinmap)
     return result
 
 
 def merge(*meshtalarray):
     """Merge array of mesh tallies meshtalarray into mesh tally result"""
-    basetally=meshtalarray[0] # More or less as the MCNP tool. 
+    basetally = meshtalarray[0] # More or less as the MCNP tool. 
     if not Geoeq(*meshtalarray):
         print('Tallys do not match and heterogeneous tally merging is not implemented. Sorry')
         return None
     for meshtal in meshtalarray:
         if meshtal.modID!=basetally.modID:
-            print('BIG FAT WARNING: Non-matching model ID found. Make sure you know what you are doing, if you do not, IT IS NOT MY PROBLEM!')
+            print('BIG FAT WARNING: Non-matching model ID found. Make sure you know what you\
+                  are doing, if you do not, IT IS NOT MY PROBLEM!')
     result = copy(basetally, exclude=['value', 'error', 'nps'])
     nps = sum([tally.nps  for tally in meshtalarray])
     result.nps = nps
@@ -673,9 +674,9 @@ def merge(*meshtalarray):
             mergeval = tally.value[i,j,k,e]*tally.nps+mergeval
             w0 = tally.nps*(tally.nps*tally.error[i, j, k, e]**2+1)*tally.value[i, j, k, e]**2
             w.append(w0)
-            result.value[i,j,k,e] = mergeval/nps
+            result.value[i, j, k, e] = mergeval/nps
             if mergeval != 0:
-                result.error[i, j, k, e] = sqrt ((sum(w)/nps-mergeval**2/nps**2)/(mergeval**2/nps))
+                result.error[i, j, k, e] = sqrt((sum(w)/nps-mergeval**2/nps**2)/(mergeval**2/nps))
             else:
                 result.error[i, j, k, e] = 0
     return result
@@ -690,28 +691,28 @@ def voxelmerge(meshtal, voxelmap):
     if not hasattr(voxelmap,'shape'):
         print("voxelmap does not look like a Numpy array, aborting")
         return
-    if voxelmap.shape!=(3,2):
+    if voxelmap.shape != (3, 2):
         print("Voxelmap has wrong shape. Aborting")
         return
     for i in range(3):
-        if voxelmap[i,1]<=voxelmap[i,0]:
+        if voxelmap[i, 1] <= voxelmap[i, 0]:
             print("This voxelmap doesn't look good to me")
             return
         for j in range(2):
-            if not voxelmap[i,j].is_integer():
+            if not voxelmap[i, j].is_integer():
                 print("WARNING: voxelmap value not integer at index {i},{j}. This is not fatal to\
                       the method, but something smells fishy here".format(i=i,j=j))
 
     ii = voxelmap[0].astype(int)
     jj = voxelmap[1].astype(int)
     kk = voxelmap[2].astype(int)
-    n = (ii[1]-ii[0])*(jj[1]-jj[0])*(kk[1]-kk[0])
+    n = (ii[1]-ii[0]) * (jj[1]-jj[0]) * (kk[1]-kk[0])
     Result = meshtal.value[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
     Error = meshtal.error[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
     Volume = meshtal.volume[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
     Integral = np.zeros((ii[1]-ii[0], jj[1]-jj[0], kk[1]-kk[0], meshtal.eints+1))
     for e in range(meshtal.eints+1):
-        Integral[:, :, :, e] = Result[:, :, :, e]*Volume
+        Integral[:, :, :, e] = Result[:, :, :, e] * Volume
     Ave = np.zeros(meshtal.eints+1)
     for e in range(meshtal.eints+1):
         Ave[e] = Integral[:, :, :, e].sum()/Volume.sum()
@@ -719,7 +720,7 @@ def voxelmerge(meshtal, voxelmap):
     for e in range(meshtal.eints+1):
         w[:, :, :, e] = (Error[:, :, :, e]**2+1)*(Ave[e]**2) # We use the meshtal_merge formula with constant NPS
     print(n)
-    Err = [sqrt((w[:,:,:,e].sum()/n-Ave[e]**2)/(n*Ave[e]**2)) for e in range(meshtal.eints+1)]
+    Err = [sqrt((w[:, :, :, e].sum()/n-Ave[e]**2) / (n*Ave[e]**2)) for e in range(meshtal.eints+1)]
     return  {'value':Ave, 'error':Err}
 
 
@@ -1186,13 +1187,13 @@ def RoMesh(Tally,ptrac_file,outp_file,dumpfile=None):  #TODO Should be in differ
 
 
 def conv_Cilind(Axs, Vec, origin, XYZ):
-    if len(XYZ)!=3:
+    if len(XYZ) != 3:
         print("input coordinate not a Triad")
         return
-    if len(Vec)!=3:
+    if len(Vec) != 3:
         print("Vector coordinate not a Triad")
         return
-    if len(Axs)!=3:
+    if len(Axs) != 3:
         print("Axis coordinate not a Triad")
         return
     # Transform to arrays
@@ -1204,19 +1205,17 @@ def conv_Cilind(Axs, Vec, origin, XYZ):
     Axs = Axs/np.linalg.norm(Axs)
     Vec = Vec/np.linalg.norm(Vec)  # Normalize the Axs and Vec vector, just in case!!
     XYZ = XYZ-origin  # Displacement made
-    L2 = np.dot(XYZ,XYZ)
-    Z = np.dot(XYZ,Axs)
-    R2 = L2-pow(Z,2)
+    L2 = np.dot(XYZ, XYZ)
+    Z = np.dot(XYZ, Axs)
+    R2 = L2-pow(Z, 2)
     R = sqrt(R2)
 
-    Radial = XYZ-Axs*Z
-    X = np.dot(Radial,Vec)
-    YVec = np.cross(Axs,Vec)
-    Y = np.dot(Radial,YVec)
-    Theta = atan2(Y,X)
-    if Theta<0:
-        Theta = Theta+2*pi
-    Theta = Theta/(2*pi)  # Because Numpy gives the results in radian and we want revolutions...
+    Radial = XYZ - Axs*Z
+    X = np.dot(Radial, Vec)
+    YVec = np.cross(Axs, Vec)
+    Y = np.dot(Radial, YVec)
+    Theta = atan2(Y, X) % (2*pi)
+    Theta = Theta/(2*pi)  # Because Numpy gives the results in radian and we want revolutions.
     return(R, Z, Theta)
 
 
@@ -1269,7 +1268,7 @@ def add(*tallies):
     print("checking tally consistency")
 
     for tally in tallies[1:]:
-        if tally.geom!=Geom or tally.ibins!=ii or tally.jbins!=jj or tally.kbins!= kk :
+        if tally.geom != Geom or tally.ibins != ii or tally.jbins != jj or tally.kbins != kk :
             print("Tally {ntally} Geometry does not match tally {nref}, adding them is beyond my current capabilites. Sorry".format(ntally=tally.n,nref=RefTal.n))
             return None
         if tally.part!=Part:
