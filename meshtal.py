@@ -545,13 +545,13 @@ def vtkwrite(meshtal, ofile):
     else:
         NFields = 2*meshtal.eints+2
     vtk_name = ofile[:-4]   # TODO: Pardon me?
-    nvoxels = meshtal.iints * meshtal.jints * meshtal.kints  # Total number of voxels
     with open(ofile,"w") as VTKFile:
         VTKFile.write('# vtk DataFile Version 3.0\n'
                       '{ProbID} vtk output\n'
                       'ASCII\n'.format(ProbID=meshtal.probID))
     if meshtal.geom == "XYZ":
-        with open(ofile,"w") as VTKFile:
+        nvoxels = meshtal.iints * meshtal.jints * meshtal.kints  # Total number of voxels
+        with open(ofile,"a") as VTKFile:
             VTKFile.write('DATASET RECTILINEAR_GRID\n')
             VTKFile.write('DIMENSIONS {X} {Y} {Z}\n'.format(X=meshtal.iints+1, Y=meshtal.jints+1,
                                                             Z=meshtal.kints+1))
@@ -561,30 +561,8 @@ def vtkwrite(meshtal, ofile):
             VTKFile.writelines(["{0}\n".format(j) for j in meshtal.jbins])
             VTKFile.write('Z_COORDINATES {Z} float\n'.format(Z=meshtal.kints+1))
             VTKFile.writelines(["{0}\n".format(k) for k in meshtal.kbins])
-
-            VTKFile.write('CELL_DATA {N}\n'.format(N=(meshtal.iints)*(meshtal.jints)*(meshtal.kints)))
-            VTKFile.write('FIELD FieldData {N} \n'.format(N=NFields))
-
-            VTKFile.write ('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
-            for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal.iints):
-                VTKFile.write('{valor} '.format(valor=meshtal.value[i, j, k, 0]))
-            VTKFile.write('\n')
-
-            VTKFile.write('TotalError_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,N=nvoxels))
-            for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal. iints):
-                VTKFile.write('{valor} '.format(valor=meshtal.error[i, j, k, 0]))
-            VTKFile.write('\n')
-
-            if meshtal.eints > 1:  # We need to make the energy bins values
-                for e in range(1, meshtal.eints+1):
-                    VTKFile.write('Tally{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,E1=meshtal.ebins[e-1],E2=meshtal.ebins[e],N=nvoxels))
-                    for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal.iints): 
-                        VTKFile.write ('{valor} '.format(valor=meshtal.value[i, j, k, e]))
-                    VTKFile.write('\n')
-                    VTKFile.write('Error{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,E1=meshtal.ebins[e-1],E2=meshtal.ebins[e],N=nvoxels))
-                    for (k, j, i) in np.ndindex(meshtal.kints, meshtal.jints, meshtal.iints): 
-                        VTKFile.write ('{valor} '.format(valor=meshtal.error[i, j, k, e]))
-                    VTKFile.write('\n')
+            value = meshtal.value
+            error = meshtal.error
 
     elif meshtal.geom == "Cyl":
         angles = np.diff(meshtal.kbins)
@@ -595,95 +573,48 @@ def vtkwrite(meshtal, ofile):
         kbins = smoothed_tally.kbins  # we call the smoothing anyway, easier code that way
         value = smoothed_tally.value
         error = smoothed_tally.error
-        with open (ofile,"w") as VTKFile:
+        nvoxels = meshtal.iints * meshtal.jints * kints  # Total number of voxels
+        npoints = (meshtal.iints +1)*(meshtal.jints+1)*(kints +1)  # Total number of points
+        #Let's define a point matrix, where each component is an array [X,Y,Z]
+        points = np.zeros((meshtal.iints+1, meshtal.jints+1, kints+1), dtype=(float, 3))
+# Make the transformation of axis, origin and vec according to TR
+        AXS = np.matmul(meshtal.axis, meshtal.TR[0:3].T)
+        VEC = np.matmul(meshtal.vec, meshtal.TR[0:3].T)
+        origin = np.matmul(meshtal.origin, meshtal.TR[0:3].T +meshtal.TR[3])
+        YVEC = np.cross(AXS, VEC) 
+        for j, jbin in enumerate(meshtal.jbins):
+            for k, kbin in enumerate(kbins):
+                points[0, j, k] = 1E-3*(cos(kbin*2*pi)*VEC+sin(kbin*2*pi)*YVEC) + jbin*AXS + origin
+        #Now the rest 
+        for i, ibin in enumerate(meshtal.ibins[1:]):
+            for j, jbin in enumerate(meshtal.jbins):
+                for k, kbin in enumerate(kbins):
+                    points[i+1, j, k] = ibin*(cos(kbin*2*pi)*VEC+sin(kbin*2*pi)*YVEC) + jbin*AXS + origin
+
+        with open(ofile, "a") as VTKFile:
             VTKFile.write('DATASET STRUCTURED_GRID\n')
-            VTKFile.write('DIMENSIONS {Z} {Y} {X}\n'.format(X=meshtal.iints+1,Y=meshtal.jints+1,Z=kints+1))
-# I'm keeping it because it produces a strange result I totally need to understand
-#       VTKFile.write('Points {Npoint} float\n'.format(Npoint=meshtal.iints+1)*(meshtal.jints+1)*(kints+1))
-            VTKFile.write('POINTS {Npoint} float\n'.format(Npoint=(meshtal.iints+1)*(meshtal.jints+1)*(kints+1)))
-            #Let's define a point matrix, where each component is a tuple [X,Y,Z]
-            points=np.zeros((meshtal.iints+1,meshtal.jints+1,kints+1),dtype=(float,3))
-            j = 0
-            k = 0
-     # OK, so let's first write the point for R=0, which we will put as 1E-3 to avoid funny things to happen with coincident points 
-            # Vector preparation
-            AXS = meshtal.axis
-            XVEC = meshtal.vec
-            YVEC = np.cross(AXS,XVEC) 
-            TR = meshtal.TR
-            matrix_TR = np.zeros((3,3))
-            for o in range(3):  # TODO: Uh, WTF?
-                matrix_TR[o]=TR[o]
-#            print(matrix_TR)
-            chngMatrixA=np.zeros((3,3))
-            for o in range(3):  # TODO: Again, why is this even needed?
-                chngMatrixA[o,0] = XVEC[o]
-                chngMatrixA[o,1] = YVEC[o]
-                chngMatrixA[o,2] = AXS[o]
-            matrix_TR = np.dot(matrix_TR,chngMatrixA)
-            matrix_TR = np.linalg.inv(matrix_TR)
-            TR_mesh = np.zeros((4,3))
-            TR_mesh[0:3] = matrix_TR[0:3]
-            TR_mesh[3] = TR[3]+meshtal.origin
-#            print(TR_mesh)
-            XVEC2 = np.zeros(3)
-            YVEC2 = np.zeros(3)
-            AXS2 = np.zeros(3)
-            for o in range(3):
-                XVEC2[o] = TR_mesh[0,o]
-                YVEC2[o] = TR_mesh[1,o]
-                AXS2[o] = TR_mesh[2,o]
-#            print(XVEC,YVEC,AXS,TR)
-#            print(XVEC2,YVEC2,AXS2)
-            if meshtal.ibins[0]==0:  # TODO: Overall, this looks awful, dear past self. 
-                for j in range(meshtal.jints+1):
-                    for k in range(kints+1):
-                        points[0,j,k] = 1E-3*(cos(kbins[k]*2*pi)*XVEC2+sin(kbins[k]*2*pi)*YVEC2)+meshtal.jbins[j]*AXS2+TR_mesh[3]
-                        VTKFile.write(' {0:E} {1:E} {2:E}\n'.format(points[0,j,k,0],points[0,j,k,1],points[0,j,k,2]))
-                iteribins = range(1,meshtal.iints+1)
-            else:
-                iteribins =range(meshtal.iints+1)
-           #Now the rest 
-            for i in iteribins:
-                for j in range(meshtal.jints+1):
-                    for k in range(kints+1):
-                        points[i,j,k]=meshtal.ibins[i]*(cos(kbins[k]*2*pi)*XVEC2+sin(kbins[k]*2*pi)*YVEC2)+meshtal.jbins[j]*AXS2+TR_mesh[3]
-                        VTKFile.write(' {0:E} {1:E} {2:E}\n'.format(points[i,j,k,0],points[i,j,k,1],points[i,j,k,2]))
-            VTKFile.write('CELL_DATA {N}\n'.format(N=(meshtal.iints)*(meshtal.jints)*(kints)))
-            VTKFile.write ('FIELD FieldData {N} \n'.format(N=NFields))
-            VTKFile.write ('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,N=meshtal.iints*meshtal.jints*kints))
-
-            for i in range(meshtal.iints):
-                for j in range(meshtal.jints):
-                    for k in range(kints):
-                        VTKFile.write ('{valor} '.format(valor=value[i,j,k,0]))
-            VTKFile.write('\n')
-
-            VTKFile.write('TotalError_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,N=(meshtal.iints*meshtal.jints*kints)))
-            for i in range(meshtal.iints):
-                for j in range(meshtal.jints):
-                    for k in range(kints):
-                        VTKFile.write ('{valor} '.format(valor=error[i,j,k,0]))
-            VTKFile.write('\n')
-
-            if meshtal.eints>1: # We need to make the energy bins values TODO: Sure, but it seems like this could be shared with XYZ Geom?  
-
-                for e in range(1,meshtal.eints+1):
-                    VTKFile.write('Tally{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,E1=meshtal.ebins[e-1],E2=meshtal.ebins[e],N=(meshtal.iints*meshtal.jints*kints)))
-                    for i in range(meshtal.iints):
-                        for j in range(meshtal.jints):
-                            for k in range(kints):
-                                VTKFile.write ('{valor} '.format(valor=value[i,j,k,e]))
-                    VTKFile.write('\n')
-         
-                    VTKFile.write('Error{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name,E1=meshtal.ebins[e-1],E2=meshtal.ebins[e],N=(meshtal.iints*meshtal.jints*kints)))
-                    for i in range(meshtal.iints):
-                        for j in range(meshtal.jints):
-                            for k in range(kints):
-                                VTKFile.write ('{valor} '.format(valor=error[i,j,k,e]))
-                    VTKFile.write('\n')
+            VTKFile.write('DIMENSIONS {Z} {Y} {X}\n'.format(X=meshtal.iints+1, Y=meshtal.jints+1,
+                                                            Z=kints+1))
+            VTKFile.write('POINTS {N} float\n'.format(N=npoints))
+            for (i, j, k) in np.ndindex(meshtal.iints+1, meshtal.jints+1, kints+1):
+                VTKFile.write(' {0:E} {1:E} {2:E}\n'.format(points[i, j, k, 0],points[i, j, k, 1],points[i, j, k, 2]))
     else:
         print("I do not know this mesh tally geometry. Quitting, sorry.")
+        return
+
+    with open(ofile, "a") as VTKFile:
+        VTKFile.write('CELL_DATA {N}\n'.format(N=nvoxels))
+        VTKFile.write('FIELD FieldData {N} \n'.format(N=NFields))
+        VTKFile.write('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
+        VTKFile.write(' '.join("%s" % v for v in value[:, :, :, 0].flat)+'\n')
+        VTKFile.write('TotalError_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
+        VTKFile.write(' '.join("%s" % e for e in error[:, :, :, 0].flat)+'\n')
+
+        for e in range(1, meshtal.eints+1):
+            VTKFile.write('Tally{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
+            VTKFile.write(' '.join("%s" % v for v in value[:, :, :, e].flat)+'\n')
+            VTKFile.write('Error{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
+            VTKFile.write(' '.join("%s" % e for e in error[:, :, :, 0].flat)+'\n')
 
 
 def ecollapse(meshtal, ebinmap):
