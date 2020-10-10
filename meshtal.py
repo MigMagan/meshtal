@@ -455,6 +455,7 @@ def updatearray(inparray, name=''):
     except:
         print('Invalid input, keeping {0}'.format(name))
 
+
 def copy(basetally, exclude=None):
     """
     returns a copy of basetally, except for the parameters in exclude.
@@ -466,60 +467,80 @@ def copy(basetally, exclude=None):
             vars(result)[var] = vars(basetally)[var]
     return result
 
+class HealthReport:
+    """ Class to hold the results of the meshtally Health report."""
+    def __init__(self, meshtally):
+        # if not isinstance(self, MeshTally):
+        #     print("Argument is not a MeshTally instance")
+        #     raise TypeError
+        self.val = [None]*(meshtally.eints+1)
+        self.err = [None]*(meshtally.eints+1)
+        for energy in range(meshtally.eints+1):
+            self.val[energy] = np.array([v for v in meshtally.value[:, :, :, energy].flatten() 
+                                         if v > 0])
+            self.err[energy] = np.array([e for e in meshtally.error[:, :, :, energy].flatten() 
+                                         if e > 0])
+        self.nvox = meshtally.iints*meshtally.jints*meshtally.kints
+        self.ebins = meshtally.ebins
 
-def HealthReport(tally, ebin=0):
-    try:
-        import colr as C
-        colour = True
-    except ImportError:
-        print("colr module not found, fancy output deactivated")
-        colour=False
-    if not isinstance(ebin, int):
-        print("ebin provided not an integer number")
-        return
-    if ebin==0:
-        print("Selected energy bin:Total")
-    else:
-        print("Selected energy bin:{E0}-{E1}MeV".format(E0=tally.ebins[ebin-1], E1=tally.ebins[ebin]))
-    if ebin>tally.eints:
-        print("ebin provided is out of tally range")
-        return
-    value = tally.value[:, :, :, ebin]
-    error = tally.error[:, :, :, ebin]
 
-    maxVal = value[:, :, :].max()
-    minVal = value[:, :, :].min()
-
-    thresolds = [0.1, 0.2, 0.5]
-    mingoodval = []
-    indexs = []
-    for thresold in thresolds:
-        index = np.argwhere(error > thresold).nonzero()
-        indexs.append(index)
-        mingoodval.append(min([value[i] for i in index]))
-
-    Nonzeros = np.count_nonzero(value[:, :, :])
-    Fraction = Nonzeros/value[:, :, :].size
-
-    print("Maximum value is {0:E}\n".format(maxVal))
-    print("Minumum good value is {0:E} \n".format(mingoodval[0]))
-    print("Minumum relevant value is {0:E} \n".format(mingoodval[1]))
-    print("Tally nonzero elements are {0:.2%}\n".format(Fraction))
-
-    for i, j in enumerate(thresolds):
-        if colour == False:
-            print("{0:.2%} voxels are below {1:.2F} error\n".format(len(indexs[i])/value.size, j))
+    def mingoodval(self, minerror, ebin=0):
+        if not isinstance(ebin, int):
+            print("ebin provided not an integer number")
+            return None
+        if ebin > len(self.val):
+            print("ebin provided is out of tally range")
+            return None
+        if min(self.err[ebin]) < minerror:
+            index = np.nonzero(self.err[ebin] < minerror)
+            minval = min([self.val[ebin][i] for i in index[0]])
+            return minval
         else:
-            ratio = len(indexs[i])/value.size
-            if ratio<0.8:
-                redvalue = 255
-                greenvalue = 255*(0.8-ratio)
+            return None  # No voxels with good enough error
+
+
+    def fractionbelowE(self, minerror, ebin=0):
+        if not isinstance(ebin, int):
+            print("ebin provided not an integer number")
+            return None
+        if ebin > len(self.val):
+            print("ebin provided is out of tally range")
+            return None
+        num = np.count_nonzero((self.err[ebin] < minerror) & (0 < self.err[ebin]))
+        return num/self.nvox
+
+
+    def report(self, ebins=[0], thresolds=[0.1, 0.2]):
+        """
+        Print general mesh tally health information. Done by default on total energy, but more
+        bins can be added as ebins
+        """
+        try:
+            import colr
+            colour = True
+        except ImportError:
+            print("colr module not found, fancy output deactivated")
+            colour=False
+        minval = self.val[0].min()
+        maxval = self.val[0].max()
+        print("Maximum value is {0:E}\n".format(maxval))
+        print("Minimum value is {0:E}\n".format(minval))
+        print("Minimum good value is {0:E} \n".format(self.mingoodval(thresolds[0])))
+        print("Minimum relevant value is {0:E} \n".format(self.mingoodval(thresolds[1])))
+        print("Tally nonzero elements are {0:.2%}\n".format(len(self.val[0])/self.nvox))
+        for i, j in enumerate(thresolds):
+            ratio = self.fractionbelowE(thresolds[i])
+            if colour == False:
+                print("{0:.2%} voxels are below {1:.2F} error\n".format(ratio, j))
             else:
-                redvalue = 1275*(1-ratio)
-                greenvalue = 255
-            print(C.color("{0:.2%} voxels are below {1:.2F} error\n", 
-                  fore=(redvalue, greenvalue, 0)).format(ratio, j))
-    return {'mingood':mingoodval[0], 'minrel':mingoodval[1]}
+                if ratio<0.8:
+                    redvalue = 255
+                    greenvalue = 255*(0.8-ratio)
+                else:
+                    redvalue = 1275*(1-ratio)
+                    greenvalue = 255
+                print(colr.color("{0:.2%} voxels are below {1:.2F} error\n",
+                      fore=(redvalue, greenvalue, 0)).format(ratio, j))
 
 
 def Geoeq(*tallies):
@@ -801,9 +822,10 @@ def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies):
         scale = np.zeros(len(tallies))
         wmin = np.zeros(len(tallies))
         for i, tally in enumerate(tallies):
+            hr = HealthReport(tally)
             maxval=tally.value.max()
-            midval=HealthReport(tally)['mingood']
-            lowval=HealthReport(tally)['minrel']
+            midval = hr.mingoodval(0.1)
+            lowval = hr.mingoodval(0.2)
             if midval==0:
                 print("Tally #{0} has nothing below threshold uncertainty. Please manually provide scaling values".format(i))
                 return
@@ -825,7 +847,8 @@ def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies):
         wmin=np.zeros(len(tallies))
         for i,tally in enumerate(tallies):
             maxval=tally.value.max()
-            midval=HealthReport(tally)['mingood']
+            hr = HealthReport(tally)
+            midval = hr.mingoodval(0.1)
             if midval==0:
                 print("Tally #{0} has nothing below threshold uncertainty. Please manually provide scaling values".format(i))
                 return
