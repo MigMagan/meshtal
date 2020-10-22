@@ -541,6 +541,18 @@ class HealthReport:
                     greenvalue = 255
                 print(colr.color("{0:.2%} voxels are below {1:.2F} error\n",
                       fore=(redvalue, greenvalue, 0)).format(ratio, j))
+    
+    
+    def ploterrorhist(self, ebin=0):
+        """Plot the cumulative fraction of voxels below error for ebint. Experimental for now"""
+        import matplotlib.pyplot as plt
+        nbins = min(len(self.err[0]) // 10, 100)
+        plt.xlabel("Statistical uncertainty")
+        plt.ylabel("Fraction of nonzero data")
+        plt.title("Error histogram for tally")
+        plt.grid(True)
+        plt.hist(self.err[ebin], cumulative=True, density=True, bins=nbins)
+########################## END OF CLASS DEFINITION #############################################
 
 
 def Geoeq(*tallies):
