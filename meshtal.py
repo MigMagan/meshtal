@@ -594,8 +594,8 @@ def vtkwrite(meshtal, ofile):
             VTKFile.writelines(["{0}\n".format(j) for j in meshtal.jbins])
             VTKFile.write('Z_COORDINATES {Z} float\n'.format(Z=meshtal.kints+1))
             VTKFile.writelines(["{0}\n".format(k) for k in meshtal.kbins])
-            value = meshtal.value
-            error = meshtal.error
+            value = [meshtal.value[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
+            error = [meshtal.error[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
 
     elif meshtal.geom == "Cyl":
         angles = np.diff(meshtal.kbins)
@@ -639,15 +639,16 @@ def vtkwrite(meshtal, ofile):
         VTKFile.write('CELL_DATA {N}\n'.format(N=nvoxels))
         VTKFile.write('FIELD FieldData {N} \n'.format(N=NFields))
         VTKFile.write('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
-        VTKFile.write(' '.join("%s" % v for v in value[:, :, :, 0].flat)+'\n')
+        VTKFile.write(' '.join("%s" % v for v in value[0])+'\n')
         VTKFile.write('TotalError_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
-        VTKFile.write(' '.join("%s" % e for e in error[:, :, :, 0].flat)+'\n')
+        VTKFile.write(' '.join("%s" % e for e in error[0])+'\n')
 
-        for e in range(1, meshtal.eints+1):
-            VTKFile.write('Tally{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
-            VTKFile.write(' '.join("%s" % v for v in value[:, :, :, e].flat)+'\n')
-            VTKFile.write('Error{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
-            VTKFile.write(' '.join("%s" % e for e in error[:, :, :, 0].flat)+'\n')
+        if meshtal.eints > 1:
+            for e in range(1, meshtal.eints+1):
+                VTKFile.write('Tally{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
+                VTKFile.write(' '.join("%s" % v for v in value[e])+'\n')
+                VTKFile.write('Error{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
+                VTKFile.write(' '.join("%s" % e for e in error[e])+'\n')
 
 
 def ecollapse(meshtal, ebinmap):
