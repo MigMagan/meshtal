@@ -562,11 +562,11 @@ def Geoeq(*tallies):
             print("Argument #{0} is not a meshtally object".format(index))
             return False
     for tally in tallies[1:]:
-        if (tally.ibins != tallies[0].ibins).all():
+        if not np.array_equal(tally.ibins, tallies[0].ibins):
             return False
-        if (tally.jbins != tallies[0].jbins).all():
+        if not np.array_equal(tally.jbins, tallies[0].jbins):
             return False
-        if (tally.kbins != tallies[0].kbins).all():
+        if not np.array_equal(tally.kbins, tallies[0].kbins):
             return False
     return True
 
