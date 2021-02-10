@@ -1011,14 +1011,13 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
                     wwfile.write('\n')
             for e in range(tally.eints):
                 for i in range(0,len(WW)-6,6):
-                    wwfile.write(''.join('{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n'.format(*WW[i:i+6,e])))
+                    wwfile.write(''.join('{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n'.format(*WW[i:i+6, e])))
                 remains=np.mod(len(WW),6) # the number of last elements of WW
                 if remains==0:
                     remains=6 # the number of elements is a multiple of 6, so the last line is full
                 wwfile.write(''.join('{0:13.5E}'.format(WW[-i,e]) for i in range(remains,0,-1)))
                 wwfile.write('\n')
-                ntal=ntal+1
-    
+        ntal = ntal+1
     return
 
 
