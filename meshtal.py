@@ -801,10 +801,9 @@ def wwrite_auto(ofile='wwout_auto',*tallies):
     return
 
 # def wwrite(*tallies,ofile='wwout',scale=None,wmin=None):
-def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies): 
+def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     #  TODO: Maybe we should rewrite this with **kwargs, even if it screws up virtually every script out there.
     # Bonus TODO: Implement wmin value for anything above an uncertainty. 
-    # extra TODO: This method is over 300 lines, WTF. 
     """ Write a MAGIC-like weight window file from tallies to ofile, 
         using wmin minimal weight and scale agressivity. 
         Tally geometrical consistency and particle non-redundancy is checked.
@@ -813,17 +812,16 @@ def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies):
     
    # Preliminary checks:
     for tally in tallies[1:]:
-        if tally.part==tallies[0].part:
+        if tally.part == tallies[0].part:
             print("tally type collision detected: At least two tallies are of the same particles. Please check your inputs. Quitting")
             return
     if not Geoeq(*tallies):
         print("Tallies do not match geometrically. Quitting")
         return
 
-    if scale==None and not wmin==None:
-
-        print("You have specified minimal weight but not scaling factor. While this could actually be implemented, my creator does not like the idea. Quitting")
-        return
+    # if scale==None and not wmin==None:
+    #     print("You have specified minimal weight but not scaling factor. While this could actually be implemented, my creator does not like the idea. Quitting")
+    #     return
     # Tally sorting acordint tp IPT:
 
     sorted(tallies, key=lambda tally: IPT[tally.part])
@@ -832,100 +830,69 @@ def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies):
 
     if scale == None:  # 
         scale = np.zeros(len(tallies))
-        wmin = np.zeros(len(tallies))
+        # wmin = np.zeros(len(tallies))
         for i, tally in enumerate(tallies):
-            hr = HealthReport(tally)
-            maxval=tally.value.max()
-            midval = hr.mingoodval(0.1)
-            lowval = hr.mingoodval(0.2)
-            if midval==0:
-                print("Tally #{0} has nothing below threshold uncertainty. Please manually provide scaling values".format(i))
+            h = HealthReport(tally)
+            scale[i] = h.fractionbelowE(0.1)/h.fractionbelowE(1)
+            if scale[i] == 0:
+                print("Tally #{0} has nothing below threshold uncertainty.\
+                      Please manually provide scaling values".format(i))
                 return
-            
-            R1=log(maxval/lowval)
-            R2=log(maxval/midval)
-            scale[i]=R2/R1
-            wmin[i]=midval/maxval**scale[i]
-            
             print("Scale for tally{0} :{1}\n".format(i,scale[i]))
-            print("Minimal weight for tally{0} :{1:.3E}\n".format(i,wmin[i]))
-
-
     if not hasattr(scale,'len'):
         scale=np.ones(len(tallies))*scale
     
-    if  wmin==None:
-
-        wmin=np.zeros(len(tallies))
-        for i,tally in enumerate(tallies):
-            maxval=tally.value.max()
-            hr = HealthReport(tally)
-            midval = hr.mingoodval(0.1)
-            if midval==0:
-                print("Tally #{0} has nothing below threshold uncertainty. Please manually provide scaling values".format(i))
+    if  wmin == None:
+        wmin = np.zeros(len(tallies))
+        for i, tally in enumerate(tallies):
+            maxval = tally.value.max()
+            h = HealthReport(tally)
+            midval = h.mingoodval(0.1)
+            if midval == 0:
+                print("Tally #{0} has nothing below threshold uncertainty. \
+                      Please manually provide scaling values".format(i))
                 return
-            wmin[i]=midval/maxval**scale[i]
+            wmin[i] = (midval/maxval) ** scale[i]
             print("Minimal weight for tally{0}: {1:.3E}\n".format(i,wmin[i]))
+    if not hasattr(wmin, 'len'):
+        wmin = np.ones(len(tallies))*wmin
 
-    if not hasattr(wmin,'len'):
-        wmin=np.ones(len(tallies))*wmin
-
-    wmin_head=wmin[0]
-    scale_head=scale[0]
+    wmin_head = wmin[0]  
+    scale_head = scale[0]
+    top_cap = kwargs.get("top_cap", 0)
     if top_cap == 0:
-        top_cap_head='nocap'
-        wwinpID=("{0:>5.2f} {1:5.1E} {2:}".format(scale_head,wmin_head,top_cap_head))
+        wwinpID = ("{0:>5.2f} {1:5.1E} {2:}".format(scale_head, wmin_head, "nocap"))
     else:
-        top_cap_head=top_cap
-        wwinpID=("{0:>5.2f} {1:5.1E} {2:5.0E}".format(scale_head,wmin_head,top_cap_head))
+        wwinpID = ("{0:>5.2f} {1:5.1E} {2:5.0E}".format(scale_head,wmin_head,top_cap))
 
 #        print(wwinpID)
 #        print(tally.probID)
 
 
-# A litte explanation on this: Due to the WWINP format, we need to transform the bins into a coarse mesh with homogeneous fine divisions inside.
-    fineiints = []
-    coarseimesh = []
-    finejints = []
-    coarsejmesh = []
-    finekints = []
-    coarsekmesh = []
-    lastspace = 0
+# A litte explanation on this: Due to the WWINP format, we need to transform the bins into
+# a coarse mesh with homogeneous fine divisions inside.
+    fineiints = [1]
+    coarseimesh = [tally.ibins[0]]
+    finejints = [1]
+    coarsejmesh = [tally.jbins[0]]
+    finekints = [1]
+    coarsekmesh = [tally.kbins[0]]
     npart = max([IPT[tally.part] for tally in tallies])
     print(npart)
     tally = tallies[0]
     
-    for i in range(tally.iints):  # TODO: Use diff, and generally, rewrite this trash
-        space = tally.ibins[i+1]-tally.ibins[i]
-        if not np.isclose(space,lastspace,1e-2):  # Yes, we actually have to use that, because MCNP in its infinite wisdom writes approximate bin values
-            coarseimesh.append(tally.ibins[i])
-            fineiints.append(1)
-        else:
-            fineiints[-1]=fineiints[-1]+1
-        lastspace=space
-    coarseimesh.append(tally.ibins[-1])
-
-    lastspace = 0
-    for j in range(tally.jints):
-        space=tally.jbins[j+1]-tally.jbins[j]
-        if not np.isclose(space,lastspace,1e-2):
-            coarsejmesh.append(tally.jbins[j])
-            finejints.append(1)
-        else:
-            finejints[-1]=finejints[-1]+1
-        lastspace=space
-    coarsejmesh.append(tally.jbins[-1])
-
-    lastspace = 0
-    for k in range(tally.kints):
-        space=tally.kbins[k+1]-tally.kbins[k]
-        if not np.isclose(space,lastspace,1e-2):
-            coarsekmesh.append(tally.kbins[k])
-            finekints.append(1)
-        else:
-            finekints[-1] = finekints[-1]+1
-        lastspace = space
-    coarsekmesh.append(tally.kbins[-1])
+    bins = [tally.ibins, tally.jbins, tally.kbins]
+    coarses = [coarseimesh, coarsejmesh, coarsekmesh]
+    fines = [fineiints, finejints, finekints]
+    for [mesh, coarse, fine] in zip(bins, coarses, fines):
+        diffs = np.diff(mesh)
+        for i, diff in enumerate(diffs[:-1]):
+            if not np.isclose(diff, diffs[i+1], 1e-2):  #   Yes, we actually have to use that, because MCNP in its infinite wisdom writes approximate bin values
+                coarse.append(mesh[i+1])
+                fine.append(1)
+            else:
+                fine[-1] = fine[-1] + 1
+        coarse.append(mesh[-1])
 
 #lets check
     print('fineiints',fineiints)
@@ -963,118 +930,80 @@ def wwrite(ofile='wwout',scale=None,wmin=None,top_cap=0,*tallies):
                 wwfile.write("\n")
 
         #array of tally location:
-        wwfile.write("{0:>13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n".format(tally.iints,tally.jints,tally.kints,x0,y0,z0))
+        wwfile.write("{0:>13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n".
+                     format(tally.iints,tally.jints,tally.kints,x0,y0,z0))
         
-        if igeom==10: #remember, cartesian
+        if igeom==10:  #remember, cartesian
             wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}\n".format(len(coarseimesh)-1,len(coarsejmesh)-1,len(coarsekmesh)-1,1))
         else: # cylindrical 
-            x1 = x0+tally.axis[0]*(tally.jbins[-1]-tally.jbins[0])
-            y1 = y0+tally.axis[1]*(tally.jbins[-1]-tally.jbins[0])
-            z1 = z0+tally.axis[2]*(tally.jbins[-1]-tally.jbins[0])
+            x1 = x0+tally.axis[0]*(tally.jbins[-1] - tally.jbins[0])
+            y1 = y0+tally.axis[1]*(tally.jbins[-1] - tally.jbins[0])
+            z1 = z0+tally.axis[2]*(tally.jbins[-1] - tally.jbins[0])
 
-            x2 = x0+tally.vec[0]*(tally.ibins[-1]-tally.ibins[0])
-            y2 = y0+tally.vec[1]*(tally.ibins[-1]-tally.ibins[0])
-            z2 = z0+tally.vec[2]*(tally.ibins[-1]-tally.ibins[0])
+            x2 = x0+tally.vec[0]*(tally.ibins[-1] - tally.ibins[0])
+            y2 = y0+tally.vec[1]*(tally.ibins[-1] - tally.ibins[0])
+            z2 = z0+tally.vec[2]*(tally.ibins[-1] - tally.ibins[0])
 
             wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n".format(len(coarseimesh)-1,len(coarsejmesh)-1,len(coarsekmesh)-1,x1,y1,z1))
             wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}\n".format(x2,y2,z2,2))
            
 # BLOCK 2 
-        mesharray=[tally.ibins[0]]
-        for i,v in enumerate(fineiints):
-            mesharray.append(fineiints[i])
-            mesharray.append(coarseimesh[i+1])
-            mesharray.append(1)
-        
-        print('The mesh array is',mesharray) 
-        for i in range(0,len(mesharray)-6,6):
-            wwfile.write(''.join('{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n'.format(*mesharray[i:i+6])))
-        remains=np.mod(len(mesharray),6) # the number of last elements of mesharray
-           
-        wwfile.write(''.join('{0:13.5E}'.format(mesharray[-i]) for i in range(remains,0,-1)))    
-        wwfile.write('\n')    
-                  
-        mesharray=[tally.jbins[0]]
-        for j,v in enumerate(finejints):
-            mesharray.append(finejints[j])
-            mesharray.append(coarsejmesh[j+1])
-            mesharray.append(1)
+        for [mesh, coarse, fine] in zip(bins, coarses, fines):
+            mesharray = [mesh[0]]
+            for i,v in enumerate(fine):
+                mesharray.append(fine[i])
+                mesharray.append(coarse[i+1])
+                mesharray.append(1)
 
-        print('The mesh array is',mesharray) 
-        for i in range(0,len(mesharray)-6,6):
-            wwfile.write(''.join('{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n'.format(*mesharray[i:i+6])))
-        remains=np.mod(len(mesharray),6) # the number of last elements of mesharray
+            print('The mesh array is',mesharray)
+            for i in range(0,len(mesharray)-6,6):
+                wwfile.write(''.join('{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n'.format(*mesharray[i:i+6])))
+            remains = np.mod(len(mesharray), 6) # the number of last elements of mesharray
 
-        wwfile.write(''.join('{0:13.5E}'.format(mesharray[-i]) for i in range(remains,0,-1)))
-        wwfile.write('\n')    
-
-        mesharray = [tally.kbins[0]]
-        for k, v in enumerate(finekints):
-            mesharray.append(finekints[k])
-            mesharray.append(coarsekmesh[k+1])
-            mesharray.append(1)
-
-        print('The mesh array is',mesharray)
-        for i in range(0,len(mesharray)-6,6):
-            wwfile.write(''.join('{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n'.format(*mesharray[i:i+6])))
-        remains=np.mod(len(mesharray),6) # the number of last elements of mesharray
-
-        wwfile.write(''.join('{0:13.5E}'.format(mesharray[-i]) for i in range(remains,0,-1)))
-        wwfile.write('\n')
+            wwfile.write(''.join('{0:13.5E}'.format(mesharray[-i]) for i in range(remains,0,-1)))
+            wwfile.write('\n')
 
 #   BLOCK 3
         # We unroll all the tally values, since this is actually the "logic" of MCNP
         # and, while we are at it, scale and cap them. This must be done for all tallies
-        ntal=0
-        for tally in tallies:
-            nwwma=tally.iints*tally.jints*tally.kints
-            WW=np.zeros((nwwma,tally.eints))
-            WW_topcap=np.zeros((nwwma,tally.eints))
-            for e in range(tally.eints):
-                l=0
-                for k in range(tally.kints): 
-                    for j in range(tally.jints):
-                        for i in range(tally.iints):
-                            WW[l,e]=tally.value[i,j,k,e+1]
+    ntal=0
+    for tally in tallies:
+        nwwma = tally.iints*tally.jints*tally.kints
+        WW = np.zeros((nwwma, tally.eints))
+        WW_topcap = np.zeros((tally.iints, tally.jints, tally.kints))
+        for e in range(tally.eints):
+            WW[:, e] = tally.value[:, :, :, e+1].flatten(order="F")
 # Exponential attenuation used in BeamLine Guides #
-                            WW_topcap[l,e]=(wmin[ntal])**((tally.ibins[i]*top_cap)/tally.ibins[-1])
-                            l=l+1
-            Wmax=WW.max()
-            print('Max value=',Wmax)
-            #Normalize & scale
-            aggro=scale[ntal]
-            for e in range(tally.eints):
-                for i,v in enumerate(WW[:,e]):
-                    WW[i,e]=(v/Wmax)**aggro
-            #Cap
-            for e in range(tally.eints):
-                for i,v in enumerate(WW[:,e]):
-                    if v < wmin[ntal]:
-                        WW[i,e]=wmin[ntal]
+        idim = tally.ibins[-1]-tally.ibins[0]
+        for i in range(tally.iints):
+            WW_topcap[i] = (wmin[ntal])**(((tally.ibins[i]-tally.ibins[0])/idim*top_cap))
+            print(WW_topcap[i, -1, -1])
 
-            #top_cap
-            if top_cap == 0:
-                print('NO upper cap on wwinp')
-            else:
-                cont=0
-                for e in range(tally.eints):
-                    for i,v in enumerate(WW[:,e]):
-                        if v > WW_topcap[i,e] :
-                            # print(WW_topcap[i,e],'subtitutes', WW[i,e])
-                            WW[i,e]=max(WW_topcap[i,e],wmin[ntal])
-                            cont=cont+1
-                print(cont,' values modified by an upper cap')
-                # print(WW_topcap)
+        Wmax = WW.max()
+        print('Max value=', Wmax)
+        #Normalize & scale
+        aggro = scale[ntal]
+        for e in range(tally.eints):
+            for i, v in enumerate(WW[:, e]):
+                WW[i, e] = max((v/Wmax)**aggro, wmin[ntal])
 
-            for e in range(tally.eints):
-                l=0
-                for k in range(tally.kints):
-                    for j in range(tally.jints):
-                        for i in range(tally.iints):
-                            tally.value_ww[i,j,k,e+1]=WW[l,e]
-                            # tally.value_ww[i,j,k,0]=WW[l,e]
-                            l=l+1
- 
+        #top_cap
+        if top_cap == 0:
+            print('NO upper cap on wwinp')
+
+        for e in range(tally.eints):
+            l=0
+            for k in range(tally.kints):
+                for j in range(tally.jints):
+                    for i in range(tally.iints):
+                        WW[l, e] = min(WW[l, e], WW_topcap[i, j, k])
+                        tally.value_ww[i,j,k,0]=WW[l,e]
+                        l = l+1
+            if top_cap != 0:
+                cont = np.count_nonzero(tally.value_ww[:, :, :, e] == WW_topcap)
+                print(cont,' values modified by an upper cap for energy bin', e)
+
+        with open(ofile, "a") as wwfile:
             #print
             for e in range(tally.eints):
                 wwfile.write('{0:13.5E} '.format(tally.ebins[e+1]))
