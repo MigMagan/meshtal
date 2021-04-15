@@ -387,7 +387,7 @@ def tgetall(tfile):
             eints = 1 # TMeshes only seem capable of 1 energy bin.
             ngrids = int(valores[5]) # TODO: This value is actually the number of meshes (I think),
             # and only seems to appear in tally type 2. Add a way to deal with this crap, probably
-            # splitting the tally. Right now, a tally 2 not in last position screws the whole method. 
+            # splitting the tally. Right now, a tally 2 not in last position screws the whole method.
             tallylist.append(MeshTally(iints, jints, kints, eints, GEOM))
             tallylist[tally].n = int(valores[7])  # Tally number
             tallylist[tally].geom = GEOM  # Geometry
@@ -396,7 +396,7 @@ def tgetall(tfile):
             tallylist[tally].ebins = [float(ebin) for ebin in valores]
             UFO2 = meshtalfile.readline()
 # Headers are read. We now read the geometry, values, and error. Multi-particles tallies will cause this to crash.
-#        return tallylist 
+#        return tallylist
 
         UFO3 = meshtalfile.readline()
         for tally in range(ntallies):
@@ -476,9 +476,9 @@ class HealthReport:
         self.val = [None]*(meshtally.eints+1)
         self.err = [None]*(meshtally.eints+1)
         for energy in range(meshtally.eints+1):
-            self.val[energy] = np.array([v for v in meshtally.value[:, :, :, energy].flatten() 
+            self.val[energy] = np.array([v for v in meshtally.value[:, :, :, energy].flatten()
                                          if v > 0])
-            self.err[energy] = np.array([e for e in meshtally.error[:, :, :, energy].flatten() 
+            self.err[energy] = np.array([e for e in meshtally.error[:, :, :, energy].flatten()
                                          if e > 0])
         self.nvox = meshtally.iints*meshtally.jints*meshtally.kints
         self.ebins = meshtally.ebins
@@ -541,8 +541,8 @@ class HealthReport:
                     greenvalue = 255
                 print(colr.color("{0:.2%} voxels are below {1:.2F} error\n",
                       fore=(redvalue, greenvalue, 0)).format(ratio, j))
-    
-    
+
+
     def ploterrorhist(self, ebin=0):
         """Plot the cumulative fraction of voxels below error for ebint. Experimental for now"""
         import matplotlib.pyplot as plt
@@ -556,7 +556,9 @@ class HealthReport:
 
 
 def Geoeq(*tallies):
-    """ Check if the mesh tallies in array tallies are geometrically equivalent, i.e: Have the same mesh. Will always return true for a single tally. If something goes awry, the answer is NO"""
+    """ Check if the mesh tallies in array tallies are geometrically equivalent,
+    i.e: Have the same mesh. Will always return true for a single tally.
+    If something goes awry, the answer is NO"""
     for index, tally in enumerate(tallies):
         if not isinstance(tally, MeshTally):
             print("Argument #{0} is not a meshtally object".format(index))
@@ -614,11 +616,11 @@ def vtkwrite(meshtal, ofile):
         AXS = np.matmul(meshtal.axis, meshtal.TR[0:3].T)
         VEC = np.matmul(meshtal.vec, meshtal.TR[0:3].T)
         origin = np.matmul(meshtal.origin, meshtal.TR[0:3].T +meshtal.TR[3])
-        YVEC = np.cross(AXS, VEC) 
+        YVEC = np.cross(AXS, VEC)
         for j, jbin in enumerate(meshtal.jbins):
             for k, kbin in enumerate(kbins):
                 points[0, j, k] = 1E-3*(cos(kbin*2*pi)*VEC+sin(kbin*2*pi)*YVEC) + jbin*AXS + origin
-        #Now the rest 
+        #Now the rest
         for i, ibin in enumerate(meshtal.ibins[1:]):
             for j, jbin in enumerate(meshtal.jbins):
                 for k, kbin in enumerate(kbins):
@@ -671,14 +673,15 @@ def ecollapse(meshtal, ebinmap):
 
     pos = 1 # reset position to bin 1. bin 0 is total, remember!!!!
     for e, ebin in enumerate(ebinmap):
-        addval = np.sum(meshtal.value[:, :, :, pos:(pos+ebin)], axis=-1) 
+        addval = np.sum(meshtal.value[:, :, :, pos:(pos+ebin)], axis=-1)
         result.value[:, :, :, e+1] = addval
-        arrayadderr = [meshtal.value[:, :, :, e0]**2*meshtal.error[:, :, :,e0]**2 for e0 in range(pos,pos+ebinmap[e])]
+        arrayadderr = [meshtal.value[:, :, :, e0]**2*meshtal.error[:, :, :,e0]**2
+                       for e0 in range(pos,pos+ebinmap[e])]
         addvaldiv = np.where(addval!=0, addval, 1)  # We do this to avoid dividing by zero for blank values
         adderr = np.sqrt(np.sum(arrayadderr, axis=0)/(addvaldiv**2))
         result.error[:, :, :, e+1] = adderr
         pos = pos+ebinmap[e]  # Move to next block of energy bins.
- 
+
     result.value[:, :, :, 0] = meshtal.value[:, :, :, 0]  # Total does not change
     result.error[:, :, :, 0] = meshtal.error[:, :, :, 0]  # Total does not change
     result.comment = "{A}, with collapsed energies as {B}".format(A=meshtal.comment[:-1], B=ebinmap)
@@ -687,7 +690,7 @@ def ecollapse(meshtal, ebinmap):
 
 def merge(*meshtalarray):
     """Merge array of mesh tallies meshtalarray into mesh tally result"""
-    basetally = meshtalarray[0] # More or less as the MCNP tool. 
+    basetally = meshtalarray[0] # More or less as the MCNP tool.
     if not Geoeq(*meshtalarray):
         print('Tallys do not match and heterogeneous tally merging is not implemented. Sorry')
         return None
@@ -698,7 +701,7 @@ def merge(*meshtalarray):
     result = copy(basetally, exclude=['value', 'error', 'nps'])
     nps = sum([tally.nps  for tally in meshtalarray])
     result.nps = nps
-    
+
     # Now the results and errors
     for (i, j, k, e) in np.ndindex(basetally.iints, basetally.jints, basetally.kints, basetally.eints):
         mergeval = 0
@@ -717,8 +720,10 @@ def merge(*meshtalarray):
 
 
 def voxelmerge(meshtal, voxelmap):
-    """ Merge voxels of meshtal according to numpy array voxelmap. Returns a dictionary with value and error arrays which are analogous to a single cell mesh tally.
-        WARNING:Becuase tally contributions to different cell often come from the same event, information is lost and errors are a mere aproximation. Use with caution!! 
+    """ Merge voxels of meshtal according to numpy array voxelmap. Returns a dictionary with value
+        and error arrays which are analogous to a single cell mesh tally.
+        WARNING:Becuase tally contributions to different cell often come from the same event,
+        information is lost and errors are a mere aproximation. Use with caution!!
         Voxelmap must be a 3x2 map stating the    subset of voxels to merge
     """
 
@@ -759,7 +764,8 @@ def voxelmerge(meshtal, voxelmap):
 
 
 def xyzput(tally,ofile):
-    """Write a meshtal point list in ofile with the data of tally. Autoconvert if tally is cylindrical """ 
+    """Write a meshtal point list in ofile with the data of tally.
+    Autoconvert if tally is cylindrical """
 #Preliminary check
     if type(tally)!=MeshTally:
         print("Argument #0 is not a meshtally object")
@@ -787,7 +793,7 @@ def xyzput(tally,ofile):
 
 
 def fput(tallylist,ofile):
-    """Write a meshtal file ofile with the data of tallylist. ProbID and nps MUST match""" 
+    """Write a meshtal file ofile with the data of tallylist. ProbID and nps MUST match"""
     print("Not implemented. You are welcome to do it yourself!")
     for tally in tallylist:
         for e in tally.eints:
@@ -804,9 +810,9 @@ def wwrite_auto(ofile='wwout_auto',*tallies):
 # def wwrite(*tallies,ofile='wwout',scale=None,wmin=None):
 def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     #  TODO: Maybe we should rewrite this with **kwargs, even if it screws up virtually every script out there.
-    # Bonus TODO: Implement wmin value for anything above an uncertainty. 
-    """ Write a MAGIC-like weight window file from tallies to ofile, 
-        using wmin minimal weight and scale agressivity. 
+    # Bonus TODO: Implement wmin value for anything above an uncertainty.
+    """ Write a MAGIC-like weight window file from tallies to ofile,
+        using wmin minimal weight and scale agressivity.
         Tally geometrical consistency and particle non-redundancy is checked.
         Mind you, currently time dependency is NOT supported.
     """
@@ -814,7 +820,8 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
    # Preliminary checks:
     for tally in tallies[1:]:
         if tally.part == tallies[0].part:
-            print("tally type collision detected: At least two tallies are of the same particles. Please check your inputs. Quitting")
+            print("tally type collision detected: At least two tallies are of the same particles.\
+                  Please check your inputs. Quitting")
             return
     if not Geoeq(*tallies):
         print("Tallies do not match geometrically. Quitting")
@@ -881,7 +888,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     npart = max([IPT[tally.part] for tally in tallies])
     print(npart)
     tally = tallies[0]
-    
+
     bins = [tally.ibins, tally.jbins, tally.kbins]
     coarses = [coarseimesh, coarsejmesh, coarsekmesh]
     fines = [fineiints, finejints, finekints]
@@ -936,7 +943,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
         
         if igeom==10:  #remember, cartesian
             wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}\n".format(len(coarseimesh)-1,len(coarsejmesh)-1,len(coarsekmesh)-1,1))
-        else: # cylindrical 
+        else: # cylindrical
             x1 = x0+tally.axis[0]*(tally.jbins[-1] - tally.jbins[0])
             y1 = y0+tally.axis[1]*(tally.jbins[-1] - tally.jbins[0])
             z1 = z0+tally.axis[2]*(tally.jbins[-1] - tally.jbins[0])
@@ -1287,10 +1294,12 @@ def ww_get(infile='wwinp'):
 
 
 def SEAM(*meshtalarray):
-    """Smart Error Aware Merger. Merges mesh tallies in meshtalarray giving different weight to the results according to their statistical error. 
-    For instance, if one of the tallies has very good statistic in one voxel (say below 0.05), and the other tallies are poor (over 0.5), 
+    """Smart Error Aware Merger. Merges mesh tallies in meshtalarray giving different weight 
+    to the results according to their statistical error. For instance, if one of the tallies has 
+    very good statistic in one voxel (say below 0.05), and the other tallies are poor (over 0.5), 
     the result will be the one from the first tally. Exact methodology to be discussed and set.
-    Highly experimental. May provide wrong results, eat your ice cream or set your house on fire. Use at your own risk.
+    Highly experimental. May provide wrong results, eat your ice cream or set your house on fire.
+    Use at your own risk.
     """
     basetally=meshtalarray[0] # More or less as the MCNP tool. 
     if not Geoeq(*meshtalarray):
