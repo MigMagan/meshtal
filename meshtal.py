@@ -409,7 +409,7 @@ def tgetall(tfile):
 
 # Added by OGM to re-orient TMESH. Hackish but working?
             if tallylist[tally].geom=="Cyl":
-                tallylist.tally.userrotate(logfile='log_tgetall_{}.txt'.format(tally))
+                tallylist[tally].userrotate(logfile='log_tgetall_{}.txt'.format(tally))
 
             lines = meshtalfile.readline()
             valores = lines.split()
