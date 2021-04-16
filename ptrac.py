@@ -207,7 +207,7 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     kbins = tally.kbins
     mesh= tracer.Meshtal(ibins, jbins, kbins)
     rays = len(cells)   
-    steps = rays // chunksize
+    steps = rays // chunksize +2  # We want a minimum of 2 steps even if rays<chunksize
 # Divide the lists into Chunks
     n = np.linspace(0, rays-1, steps, dtype=int)
     init_chunk = [initp[j:n[i+1]] for i, j in enumerate(n[:-1])]
