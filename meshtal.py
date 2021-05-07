@@ -77,6 +77,7 @@ class MeshTally:
             else:
                 print("Unknown Geometry type")
                 return None
+            vol[i, j, k] = v
         return vol
 
     def userrotate(self, logfile=None):
