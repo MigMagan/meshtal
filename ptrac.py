@@ -180,7 +180,7 @@ def ptrac_point_sample(tally, ptrac_file, pformat="ASCII"):
         if iX1 in range(X1i) and iX2 in range(X2i) and iX3 in range(X3i):
             index[:, j] = [iX1, iX2, iX3, point[3]]
             data[j] = 1
-    s = sparse.COO(index, data, shape=(X1i, X2i, X3i, maxncells))
+    s = sparse.COO(index, data, shape=(X1i, X2i, X3i, maxncells), prune=True)
     Ss = s.sum(axis=3).todense()
     total_voxel = X1i*X2i*X3i
     total_voxel_low = np.count_nonzero(Ss < 10)
