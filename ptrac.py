@@ -276,3 +276,52 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
                         df.write("{0} {1} {2} {3:5.4g}\n".format(X, Y, Z, ro[i,j,k]))
     return ro
 
+def mater2voxel(mat_list, cell_map, volumes):
+    """ Generate a material distribution in a mesh, given a material list mat_list and a cell map cell_map
+    and a volumes matrix"""
+    import material as mat
+    cell_total = cell_map.sum(axis=3).todense()
+    iints = cell_map.shape[0]
+    jints = cell_map.shape[1]
+    kints = cell_map.shape[2]
+    lvoxel = np.dtype([('voxel_ID',int),('i',int),('j',int),('k',int),('Material',object),('RoA',float),('RoG',float),('volume',float)])
+    voxel_comp_index = np.zeros((iints*jints*kints),dtype=lvoxel)
+    voxel_ID = 0
+    mat_list_sorted = {}  # Dictionary for cells.
+    print ("Creating cell material dictionary")
+    for m in mat_list:
+        i = m['C']
+        mat_list_sorted[i] = m
+    print ("Created cell material dictionary")
+    for i, j, k in product(range(iints), range(jints), range(kints)):
+        if voxel_ID %1e4 == 0: print(voxel_ID)
+        volume = volumes[i, j, k]
+        sint_RoA = 0
+        sint_RoG = 0
+        sint_mat = mat.mat(voxel_ID)
+        if cell_total[i][j][k] == 0:
+            sint_mat.N = []
+            sint_mat.M = []
+        else:
+            cells_ijk = cell_map[i, j, k].coords[0]
+            data_ijk = cell_map[i, j, k].data
+            lista_isotopes_comp=[]
+            for cel in cells_ijk:
+                addedmat = mat_list_sorted[cel]['Material']
+                for index, isotope in enumerate(addedmat.N):
+                    if isotope not in lista_isotopes_comp:
+                        lista_isotopes_comp.append((isotope, addedmat.M[index]*cell_map[i][j][k][cel]))
+                    else:
+                        isoindex = lista_isotopes_comp[0].index(isotope) # Find the first (and should be only) isotope that matches
+                        lista_isotopes_comp[isoindex][1] = lista_isotopes_comp[isoindex]+addedmat.M[index]*cell_map[i][j][k][cel]
+
+                sint_RoA = sint_RoA + cell_map[i][j][k][cel]*mat_list_sorted[cel]['RoA']/cell_total[i, j, k]
+                sint_RoG = sint_RoG + cell_map[i][j][k][cel]*mat_list_sorted[cel]['RoG']/cell_total[i, j, k]
+                sint_mat.N = [int(iso[0]) for iso in lista_isotopes_comp]
+                sint_mat.M = [float(iso[1]) for iso in lista_isotopes_comp]
+#            linea=np.array((voxel_ID,i,j,k,sint_mat,sint_RoA,sint_RoG,volume),dtype=lvoxel)
+#            print(linea)
+        sint_mat.normalize()  
+        voxel_comp_index[voxel_ID] = (voxel_ID, i, j, k,sint_mat, sint_RoA, sint_RoG, volume)
+        voxel_ID += 1
+    return    voxel_comp_index
