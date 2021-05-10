@@ -218,8 +218,8 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     nchunks = len(meshes)
     print("Tracing chunks of {0} rays".format(chunksize))
     with Pool(cores) as p:
-          s0 = p.starmap(tracer.trace_list, tqdm(starargs, total=nchunks), chunksize=1)
-          # s0 = p.imap_unordered(do_work, starargs)
+        s0 = p.starmap(tracer.trace_list, tqdm(starargs, total=nchunks), chunksize=1)
+        # s0 = p.imap_unordered(do_work, starargs)
     s = sum(s0)
     Ss = s.sum(axis=3).todense()
     total_voxel = s.shape[0]*s.shape[1]*s.shape[2]
@@ -245,11 +245,11 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
         print("Uh, uh, First argument does not seem like a meshtal object. Quitting.")
         return None
     # Lets get a Sorted cellist
-    Cellist=cel.ogetall(outp_file)
-    MaxNCell=0
+    Cellist = cel.ogetall(outp_file)
+    MaxNCell = 0
     for cell in Cellist:
         if cell.ncell > MaxNCell:
-            MaxNCell=cell.ncell
+            MaxNCell = cell.ncell
     SortedCellist=[None]*(MaxNCell+1)
     for cell in Cellist:
         SortedCellist[cell.ncell]=cell
