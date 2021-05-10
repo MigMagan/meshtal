@@ -6,12 +6,12 @@
 from math import cos, sin, pi, sqrt, log, atan2
 import meshtal as mt
 import tracer
-import cell as cel
+import cell
 import numpy as np
 from tqdm import tqdm
 from pyne import mcnp
 import sparse 
-
+from itertools import product
 
 def read_ptrac_head(ptrac_file):
     """Read and return the headers of an open ASCII ptrac file, ptrac_file"""
@@ -247,12 +247,12 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     # Lets get a Sorted cellist
     Cellist = cel.ogetall(outp_file)
     MaxNCell = 0
-    for cell in Cellist:
-        if cell.ncell > MaxNCell:
-            MaxNCell = cell.ncell
+    for c in Cellist:
+        if c.ncell > MaxNCell:
+            MaxNCell = c.ncell
     SortedCellist=[None]*(MaxNCell+1)
-    for cell in Cellist:
-        SortedCellist[cell.ncell]=cell
+    for c in Cellist:
+        SortedCellist[c.ncell] = c
     print ("Sorted Cell list created")
     print ("composing density matrix")
     iints = tally.iints
@@ -263,8 +263,8 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     for i in tqdm(range(iints), position=0):
         for j in range(jints):
             for k in range(kints):
-                for l, cell in enumerate(pmatrix[i, j, k].nonzero()[0]):
-                    ro[i, j, k] = SortedCellist[cell].density*pmatrix[i, j, k, cell]/Ss[i, j, k] +ro[i, j, k]
+                for l, c in enumerate(pmatrix[i, j, k].nonzero()[0]):
+                    ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] +ro[i, j, k]
     if dumpfile!=None:
         with open(dumpfile,"w") as df:
             for i in range(iints):
