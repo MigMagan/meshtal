@@ -149,10 +149,26 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
         return ptrac_completo[:i]
 
 
-def ptrac_point_sample(tally, ptrac_file, pformat="ASCII"):
+def _remove_below_frac(s, min_frac):
+    """ Remove all data for a sparse matrix s that is below min_frac"""
+    total = s.sum(axis=3).todense()
+    del_index =[]
+    m=0
+    for point, n in zip (s.coords.T, s.data):
+        i, j, k = point[0:3]
+        if n < min_frac*total[i, j, k]:
+            del_index.append(m)
+        m+=1
+    newcoords = np.delete(s.coords, del_index, 1)
+    newdata = np.delete(s.data, del_index, 0)
+    s0 = sparse.COO(newcoords, newdata, shape=s.shape, prune=True)
+    return s0
+
+def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
     """ Return the fraction of cells present in each voxel of mesh tally tally,
     using a ptrac_file for tracing and outp_file for cell info. Result is a sparse matrix
-    ptracformat: Format of ptrac, ASCII or BIN"""
+    ptracformat: Format of ptrac, ASCII or BIN. Optionally, min_frac neglects fractions below 
+    that value, which may be caused by rounding errors, specially when using ASCII ptracs"""
     if not hasattr(tally,'value'):
         print("Uh, uh, First argument does not seem like a meshtal object. Quitting.")
         return None
@@ -190,10 +206,14 @@ def ptrac_point_sample(tally, ptrac_file, pformat="ASCII"):
     print(total_voxel_low,' of ', total_voxel,' have less than 10 hits per voxel')
     if total_voxel_no!=0:
         print(total_voxel_no,' of ', total_voxel,' have no hits TAKE CARE!!!')
-    return s
+    if min_frac ==0:
+        return s
+    else:
+        s0 = _remove_below_frac(s, min_frac)
+        return s0
 
 
-def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=None):
+def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=None, min_frac=0):
     from multiprocessing import Pool
     """ Return the fraction of cells present in each voxel of mesh tally tally,
     using a ptrac_file for ray tracing and outp_file for cell info. Result is a sparse matrix
@@ -226,7 +246,11 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     total_voxel_no = total_voxel-np.count_nonzero(Ss)
     if total_voxel_no!=0:
         print(total_voxel_no,' of ', total_voxel,' have no hits TAKE CARE!!!')
-    return s
+    if min_frac ==0:
+        return s
+    else:
+        s0 = _remove_below_frac(s, min_frac)
+        return s0
 
 
 def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", dumpfile=None):
