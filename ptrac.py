@@ -3,7 +3,6 @@
 """"Module to sample densities in an MCNP mesh using ptrac.
 @author: Miguel Magán
 """
-from math import cos, sin, pi, sqrt, log, atan2
 import meshtal as mt
 import tracer
 import cell
@@ -214,10 +213,10 @@ def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
 
 
 def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=None, min_frac=0):
-    from multiprocessing import Pool
     """ Return the fraction of cells present in each voxel of mesh tally tally,
     using a ptrac_file for ray tracing and outp_file for cell info. Result is a sparse matrix
     ptracformat"""
+    from multiprocessing import Pool
     if pformat.capitalize() == "Ascii":
         print ("ASCII reading not implemented for ray tracing")
         return None
@@ -269,11 +268,8 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
         print("Uh, uh, First argument does not seem like a meshtal object. Quitting.")
         return None
     # Lets get a Sorted cellist
-    Cellist = cel.ogetall(outp_file)
-    MaxNCell = 0
-    for c in Cellist:
-        if c.ncell > MaxNCell:
-            MaxNCell = c.ncell
+    Cellist = cell.ogetall(outp_file)
+    MaxNCell = max([c.ncell for c in Cellist])
     SortedCellist=[None]*(MaxNCell+1)
     for c in Cellist:
         SortedCellist[c.ncell] = c
@@ -287,7 +283,7 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     for i in tqdm(range(iints), position=0):
         for j in range(jints):
             for k in range(kints):
-                for l, c in enumerate(pmatrix[i, j, k].nonzero()[0]):
+                for c in pmatrix[i, j, k].nonzero()[0]:
                     ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] +ro[i, j, k]
     if dumpfile!=None:
         with open(dumpfile,"w") as df:
@@ -301,13 +297,11 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     return ro
 
 def mater2voxel(mat_list, cell_map, volumes):
-    """ Generate a material distribution in a mesh, given a material list mat_list and a cell map cell_map
-    and a volumes matrix"""
+    """ Generate a material distribution in a mesh, given a material list mat_list and a cell map 
+    cell_map and a volumes matrix."""
     import material as mat
     cell_total = cell_map.sum(axis=3).todense()
-    iints = cell_map.shape[0]
-    jints = cell_map.shape[1]
-    kints = cell_map.shape[2]
+    iints, jints, kints = cell_map.shape[0:3]
     lvoxel = np.dtype([('voxel_ID',int),('i',int),('j',int),('k',int),('Material',object),('RoA',float),('RoG',float),('volume',float)])
     voxel_comp_index = np.zeros((iints*jints*kints),dtype=lvoxel)
     voxel_ID = 0
@@ -330,22 +324,22 @@ def mater2voxel(mat_list, cell_map, volumes):
             cells_ijk = cell_map[i, j, k].coords[0]
             data_ijk = cell_map[i, j, k].data
             lista_isotopes_comp=[]
-            for cel in cells_ijk:
+            for cel, data in zip(cells_ijk, data_ijk):
                 addedmat = mat_list_sorted[cel]['Material']
                 for index, isotope in enumerate(addedmat.N):
                     if isotope not in lista_isotopes_comp:
-                        lista_isotopes_comp.append((isotope, addedmat.M[index]*cell_map[i][j][k][cel]))
+                        lista_isotopes_comp.append((isotope, addedmat.M[index]*data))
                     else:
                         isoindex = lista_isotopes_comp[0].index(isotope) # Find the first (and should be only) isotope that matches
-                        lista_isotopes_comp[isoindex][1] = lista_isotopes_comp[isoindex]+addedmat.M[index]*cell_map[i][j][k][cel]
+                        lista_isotopes_comp[isoindex][1] = lista_isotopes_comp[isoindex]+addedmat.M[index]*data
 
-                sint_RoA = sint_RoA + cell_map[i][j][k][cel]*mat_list_sorted[cel]['RoA']/cell_total[i, j, k]
-                sint_RoG = sint_RoG + cell_map[i][j][k][cel]*mat_list_sorted[cel]['RoG']/cell_total[i, j, k]
+                sint_RoA = sint_RoA + data*mat_list_sorted[cel]['RoA']/cell_total[i, j, k]
+                sint_RoG = sint_RoG + data*mat_list_sorted[cel]['RoG']/cell_total[i, j, k]
                 sint_mat.N = [int(iso[0]) for iso in lista_isotopes_comp]
                 sint_mat.M = [float(iso[1]) for iso in lista_isotopes_comp]
 #            linea=np.array((voxel_ID,i,j,k,sint_mat,sint_RoA,sint_RoG,volume),dtype=lvoxel)
 #            print(linea)
         sint_mat.normalize()  
-        voxel_comp_index[voxel_ID] = (voxel_ID, i, j, k,sint_mat, sint_RoA, sint_RoG, volume)
+        voxel_comp_index[voxel_ID]=(voxel_ID, i, j, k, sint_mat, sint_RoA, sint_RoG, volume)
         voxel_ID += 1
     return    voxel_comp_index
