@@ -164,9 +164,9 @@ def flist(infile='meshtal'):
 def fgetheader(infile='meshtal'):
     """ Auxiliary method to get probID, modID and nps from a meshtal file """
     with open(infile, "r") as MeshtalFile:
-        header = MeshtalFile.readline()
+        header = MeshtalFile.readline().rstrip('\n')
         probID = header.split("probid =")[1]  # got problem ID
-        modID = MeshtalFile.readline()  # Description of the model
+        modID = MeshtalFile.readline().rstrip("\n")  # Description of the model
         header = MeshtalFile.readline()  # Line with the number of histories
         fnps = float(header.split()[-1])  # NPS in floating number
         nps = int(fnps)  # NPS
@@ -309,8 +309,8 @@ def fget(n, infile='meshtal'):
     tally = fgettally(tallystr)
 
     tally.nps = header['nps']
-    tally.probID = header['probID'][:-1]
-    tally.modID = header['modID'][:-1]
+    tally.probID = header['probID']
+    tally.modID = header['modID']
     return tally
 
 
