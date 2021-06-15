@@ -394,7 +394,8 @@ def tgetall(tfile):
             tallylist[tally].geom = GEOM  # Geometry
             lines = meshtalfile.readline()
             valores = lines.split()
-            tallylist[tally].ebins = [float(ebin) for ebin in valores]
+            for e, v in valores:
+                tallylist[tally].ebins[e] = float(v)
             UFO2 = meshtalfile.readline()
 # Headers are read. We now read the geometry, values, and error. Multi-particles tallies will cause this to crash.
 #        return tallylist
@@ -414,20 +415,25 @@ def tgetall(tfile):
 
             lines = meshtalfile.readline()
             valores = lines.split()
-            tallylist[tally].ibins = [float(ibin) for ibin in valores]
+            for i, v in enumerate(valores):
+                tallylist[tally].ibins[i] = float(v)
 
             lines = meshtalfile.readline()
             valores = lines.split()
-            tallylist[tally].jbins = [float(jbin) for jbin in valores]
+            for j, v in enumerate(valores):
+                tallylist[tally].jbins[j] = float(v)
 
             lines = meshtalfile.readline()
             valores = lines.split()
 
             if tallylist[tally].geom == "XYZ":
-                tallylist[tally].kbins = [float(kbin) for kbin in valores]
+                for k, v in enumerate(valores):
+                    tallylist[tally].kbins[k] = float(v)
             if tallylist[tally].geom=="Cyl":
-                tallylist[tally].kbins[1:] = [float(kbin)/360 for kbin in valores]
                 tallylist[tally].kbins[0] = 0
+                for k, v in enumerate(valores):
+                    tallylist[tally].kbins[k+1] = float(v)
+
             for (k, j) in np.ndindex(kints, jints):
                 lines = meshtalfile.readline()
                 valores = lines.split()
