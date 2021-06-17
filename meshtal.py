@@ -394,7 +394,7 @@ def tgetall(tfile):
             tallylist[tally].geom = GEOM  # Geometry
             lines = meshtalfile.readline()
             valores = lines.split()
-            for e, v in valores:
+            for e, v in enumerate(valores):
                 tallylist[tally].ebins[e] = float(v)
             UFO2 = meshtalfile.readline()
 # Headers are read. We now read the geometry, values, and error. Multi-particles tallies will cause this to crash.
