@@ -4,7 +4,7 @@ __author__       =  "Miguel Magan"
 
 import numpy as np
 import sparse
-from pyne import mcnp
+#from pyne import mcnp
 from multiprocessing import Pool
 import tqdm
 from tqdm.contrib import tzip

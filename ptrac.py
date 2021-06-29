@@ -8,7 +8,7 @@ import tracer
 import cell
 import numpy as np
 from tqdm import tqdm
-from pyne import mcnp
+#from pyne import mcnp
 import sparse 
 from itertools import product
 
@@ -102,10 +102,11 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
         npart = head["v"][5][0]
         # print('Max number of particles in ptrac:', npart)  # Notice this is total, SRC may be less
         ptrac_completo=np.zeros((npart, 4))
+        print('\n Reading ptrac file')
         for j in tqdm(range(npart), position=0, unit="part", unit_scale=True):
             line = f.readline()
             if not line:
-                print ("ptrac apparently stopped at nps=", j)
+                print ("\nptrac apparently stopped at nps=", j)
                 break  # end of file
             tokens = line.split()
             Event_ID = int(tokens[1])
@@ -163,7 +164,7 @@ def _remove_below_frac(s, min_frac):
     s0 = sparse.COO(newcoords, newdata, shape=s.shape, prune=True)
     return s0
 
-def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
+def ptrac_point_sample(tally, ptrac_files, pformat="ASCII", min_frac=0):
     """ Return the fraction of cells present in each voxel of mesh tally tally,
     using a ptrac_file for tracing and outp_file for cell info. Result is a sparse matrix
     ptracformat: Format of ptrac, ASCII or BIN. Optionally, min_frac neglects fractions below 
@@ -175,7 +176,13 @@ def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
     X2i = tally.jints # numero de divisiones en Y
     X3i = tally.kints # numero de divisiones en Z
   # ============================ Transformacion de coordenadas ========================
-    ptrac_var = get_ptrac_src(ptrac_file, pformat=pformat)
+    if type(ptrac_files) == list:
+        for i, ptrac_file in enumerate(ptrac_files):
+            ptrac_var = get_ptrac_src(ptrac_file, pformat=pformat)
+            if i != 0:
+                ptrac_var = np.concatenate((ptrac_var,ptrac_var),axis=0)
+    if type(ptrac_files) == str:
+        ptrac_var = get_ptrac_src(ptrac_files, pformat=pformat)
     if tally.geom=="Cyl":
         ptrac_var[:,0:3] = mt.conv_Cilindricas_multi(tally.axis, tally.vec,
                                                      tally.origin, ptrac_var[:,0:3])
@@ -186,9 +193,8 @@ def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
     X3 = tally.kbins
     data = np.zeros((npart), dtype=int)
     index = np.zeros((4, npart), dtype=int)
-    print ("processing particles")
-    for j, point  in tqdm(enumerate(ptrac_var), position=0, unit="part", unit_scale=True, 
-                          total=npart):
+    print ("\nprocessing particles")
+    for j, point  in tqdm(enumerate(ptrac_var), position=0, unit="part", unit_scale=True, total=npart):
         iX1 = np.searchsorted(X1, point[0])-1
         iX2 = np.searchsorted(X2, point[1])-1
         iX3 = np.searchsorted(X3, point[2])-1

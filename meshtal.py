@@ -881,6 +881,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
 
 # A litte explanation on this: Due to the WWINP format, we need to transform the bins into
 # a coarse mesh with homogeneous fine divisions inside.
+    tally = tallies[0]
     fineiints = [1]
     coarseimesh = [tally.ibins[0]]
     finejints = [1]
@@ -889,7 +890,6 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     coarsekmesh = [tally.kbins[0]]
     npart = max([IPT[tally.part] for tally in tallies])
     print(npart)
-    tally = tallies[0]
 
     bins = [tally.ibins, tally.jbins, tally.kbins]
     coarses = [coarseimesh, coarsejmesh, coarsekmesh]
