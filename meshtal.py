@@ -613,8 +613,8 @@ def vtkwrite(meshtal, ofile):
         smoothed_tally = meshtal.smoothang(0.166)
         kints = smoothed_tally.kints
         kbins = smoothed_tally.kbins  # we call the smoothing anyway, easier code that way
-        value = [smoothed_tally.value[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
-        error = [smoothed_tally.error[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
+        value = [smoothed_tally.value[:, :, :, e].flatten(order="C") for e in range(meshtal.eints+1)]
+        error = [smoothed_tally.error[:, :, :, e].flatten(order="C") for e in range(meshtal.eints+1)]
 
         nvoxels = meshtal.iints * meshtal.jints * kints  # Total number of voxels
         npoints = (meshtal.iints +1)*(meshtal.jints+1)*(kints +1)  # Total number of points
