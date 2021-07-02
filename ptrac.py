@@ -8,7 +8,7 @@ import tracer
 import cell
 import numpy as np
 from tqdm import tqdm
-#from pyne import mcnp
+from pyne import mcnp
 import sparse 
 from itertools import product
 
@@ -175,14 +175,14 @@ def ptrac_point_sample(tally, ptrac_files, pformat="ASCII", min_frac=0):
     X1i = tally.iints # numero de divisiones en X
     X2i = tally.jints # numero de divisiones en Y
     X3i = tally.kints # numero de divisiones en Z
-  # ============================ Transformacion de coordenadas ========================
-    if type(ptrac_files) == list:
+    if type(ptrac_files) == list: # posible opcion para convinar varios ptrac (normalizacion???)
+        ptrac_var=np.zeros((0,4))
         for i, ptrac_file in enumerate(ptrac_files):
-            ptrac_var = get_ptrac_src(ptrac_file, pformat=pformat)
-            if i != 0:
-                ptrac_var = np.concatenate((ptrac_var,ptrac_var),axis=0)
-    if type(ptrac_files) == str:
+            ptrac_var_i = get_ptrac_src(ptrac_file, pformat=pformat)
+            ptrac_var = np.concatenate((ptrac_var,ptrac_var_i),axis=0)
+    if type(ptrac_files) == str: 
         ptrac_var = get_ptrac_src(ptrac_files, pformat=pformat)
+# ============================ Transformacion de coordenadas ========================
     if tally.geom=="Cyl":
         ptrac_var[:,0:3] = mt.conv_Cilindricas_multi(tally.axis, tally.vec,
                                                      tally.origin, ptrac_var[:,0:3])
@@ -206,7 +206,9 @@ def ptrac_point_sample(tally, ptrac_files, pformat="ASCII", min_frac=0):
     total_voxel = X1i*X2i*X3i
     total_voxel_low = np.count_nonzero(Ss < 10)
     total_voxel_no = total_voxel-np.count_nonzero(Ss)
-    ave_hits = sum(data)/total_voxel
+    ave_hits = np.mean(Ss).round(2)  #sum(data)/total_voxel
+    from collections import Counter
+    print('Hits distribution (hits,voxels): ', Counter(Ss.flatten()).most_common(5))
     print('Average hits per voxel: ',ave_hits)
     print(total_voxel_low,' of ', total_voxel,' have less than 10 hits per voxel')
     if total_voxel_no!=0:
@@ -299,8 +301,8 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
                     Y = (tally.jbins[j]+tally.jbins[j+1])/2
                     for k in range(kints):
                         Z = (tally.kbins[k]+tally.kbins[k+1])/2
-                        df.write("{0} {1} {2} {3:5.4g}\n".format(X, Y, Z, ro[i,j,k]))
-    return ro
+                        df.write("{0} {1} {2} {3:5.4g} {4:.0g}\n".format(X, Y, Z, ro[i,j,k],Ss[i, j, k]))
+    return ro,Ss
 
 def mater2voxel(mat_list, cell_map, volumes):
     """ Generate a material distribution in a mesh, given a material list mat_list and a cell map 
