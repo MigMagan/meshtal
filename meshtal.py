@@ -803,7 +803,10 @@ def xyzput(tally,ofile):
         XVEC = tally.vec
         YVEC = np.cross(AXS,XVEC)
     with open(ofile+'.csv', "w") as putfile:
-        putfile.write('X Y Z TallyValue TallyError\n')
+        if tally.geom=="Cyl":
+            putfile.write('R Z Theta X Y Z TallyValue TallyError\n')
+        else:
+            putfile.write('X Y Z TallyValue TallyError\n')
         for i in range(tally.iints):
             for j in range(tally.jints):
                 for k in range(tally.kints):
@@ -812,12 +815,14 @@ def xyzput(tally,ofile):
                         Z = (tally.jbins[j]+tally.jbins[j+1])/2
                         Theta = (tally.kbins[k]+tally.kbins[k+1])/2
                         XYZ = R*(XVEC*cos(2*pi*Theta)+YVEC*sin(2*pi*Theta))+Z*AXS+tally.origin
+                        putfile.write("{0} {1} {2} {3} {4} {5} {6} {7}\n".format(R, Z, Theta, XYZ[0],XYZ[1],XYZ[2],
+                                          tally.value[i,j,k,-1],tally.error[i,j,k,-1]))
                     else:
                         X = (tally.ibins[i]+tally.ibins[i+1])/2
                         Y = (tally.jbins[j]+tally.jbins[j+1])/2
                         Z = (tally.kbins[k]+tally.kbins[k+1])/2
                         XYZ = [X,Y,Z]+tally.origin
-                    putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[0],XYZ[1],XYZ[2],
+                        putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[0],XYZ[1],XYZ[2],
                                           tally.value[i,j,k,-1],tally.error[i,j,k,-1]))
 
 
