@@ -217,9 +217,9 @@ def flist(infile='meshtal'):
 def fgetheader(infile='meshtal'):
     """ Auxiliary method to get probID, modID and nps from a meshtal file """
     with open(infile, "r") as MeshtalFile:
-        header = MeshtalFile.readline()
+        header = MeshtalFile.readline().rstrip('\n')
         probID = header.split("probid =")[1]  # got problem ID
-        modID = MeshtalFile.readline()  # Description of the model
+        modID = MeshtalFile.readline().rstrip("\n")  # Description of the model
         header = MeshtalFile.readline()  # Line with the number of histories
         fnps = float(header.split()[-1])  # NPS in floating number
         nps = int(fnps)  # NPS
@@ -362,8 +362,8 @@ def fget(n, infile='meshtal'):
     tally = fgettally(tallystr)
 
     tally.nps = header['nps']
-    tally.probID = header['probID'][:-1]
-    tally.modID = header['modID'][:-1]
+    tally.probID = header['probID']
+    tally.modID = header['modID']
     return tally
 
 
@@ -394,8 +394,8 @@ def fgetall(infile='meshtal'):
     for t in tallystr:
         tallylist.append(fgettally(t))
         tallylist[-1].nps = header['nps']
-        tallylist[-1].modID = header['modID'].rstrip( )
-        tallylist[-1].probID = header['probID'].rstrip( )
+        tallylist[-1].modID = header['modID']
+        tallylist[-1].probID = header['probID']
     return tallylist
 
 
@@ -596,6 +596,7 @@ class HealthReport:
                 print(colr.color("{0:.2%} voxels are below {1:.2F} error",
                       fore=(redvalue, greenvalue, 0)).format(ratio, j))
 
+
     def ploterrorhist(self, ebin=0):
         """Plot the cumulative fraction of voxels below error for ebint. Experimental for now"""
         import matplotlib.pyplot as plt
@@ -657,7 +658,7 @@ def vtkwrite(meshtal, ofile):
         angles = np.diff(meshtal.kbins)
         if max(angles) > 0.1666:
             print (' Smoothing angles above 60º\n')
-        smoothed_tally = meshtal.smoothang(1/36)
+        smoothed_tally = meshtal.smoothang(0.166)
         kints = smoothed_tally.kints
         kbins = smoothed_tally.kbins  # we call the smoothing anyway, easier code that way
         value = [smoothed_tally.value[:, :, :, e].flatten(order="C") for e in range(meshtal.eints+1)]
@@ -865,8 +866,8 @@ def fput(tallylist,ofile):
                         pass
 
 
-def wwrite_auto(ofile='wwout_auto', *tallies, **kwargs):
-    wwrite(ofile, None, None, *tallies, **kwargs)
+def wwrite_auto(ofile='wwout_auto',*tallies):
+    wwrite(ofile,None,None,0,*tallies)
     return
 
 # def wwrite(*tallies,ofile='wwout',scale=None,wmin=None):
@@ -878,7 +879,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
         Tally geometrical consistency and particle non-redundancy is checked.
         Mind you, currently time dependency is NOT supported.
     """
-    
+
    # Preliminary checks:
     for tally in tallies[1:]:
         if tally.part == tallies[0].part:
@@ -889,18 +890,12 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
         print("Tallies do not match geometrically. Quitting")
         return
 
-    # if scale==None and not wmin==None:
-    #     print("You have specified minimal weight but not scaling factor. While this could actually be implemented, my creator does not like the idea. Quitting")
-    #     return
-    # Tally sorting acordint tp IPT:
-
     sorted(tallies, key=lambda tally: IPT[tally.part])
     # Check
     print([tal.part for tal in tallies])
 
-    if scale == None:  # 
+    if scale == None:  #
         scale = np.zeros(len(tallies))
-        # wmin = np.zeros(len(tallies))
         for i, tally in enumerate(tallies):
             h = HealthReport(tally)
             scale[i] = h.fractionbelowE(0.1)/h.fractionbelowE(1)
@@ -911,7 +906,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
             print("Scale for tally{0} :{1}\n".format(i,scale[i]))
     if not hasattr(scale,'len'):
         scale=np.ones(len(tallies))*scale
-    
+
     if  wmin == None:
         wmin = np.zeros(len(tallies))
         for i, tally in enumerate(tallies):
@@ -927,29 +922,21 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     if not hasattr(wmin, 'len'):
         wmin = np.ones(len(tallies))*wmin
 
-    wmin_head = wmin[0]  
-    scale_head = scale[0]
     top_cap = kwargs.get("top_cap", 0)
     if top_cap == 0:
-        wwinpID = ("{0:>5.2f} {1:5.1E} {2:}".format(scale_head, wmin_head, "nocap"))
+        wwinpID = ("{0:>5.2f} {1:5.1E} {2:}".format(scale[0], wmin[0], "nocap"))
     else:
-        wwinpID = ("{0:>5.2f} {1:5.1E} {2:5.0E}".format(scale_head,wmin_head,top_cap))
-
-#        print(wwinpID)
-#        print(tally.probID)
-
+        wwinpID = ("{0:>5.2f} {1:5.1E} {2:5.0E}".format(scale[0], wmin[0], top_cap))
 
 # A litte explanation on this: Due to the WWINP format, we need to transform the bins into
 # a coarse mesh with homogeneous fine divisions inside.
     tally = tallies[0]
-    fineiints = [1]
+    fineiints, finejints, finekints = [1], [1], [1]
     coarseimesh = [tally.ibins[0]]
-    finejints = [1]
     coarsejmesh = [tally.jbins[0]]
-    finekints = [1]
     coarsekmesh = [tally.kbins[0]]
     npart = max([IPT[tally.part] for tally in tallies])
-#    print(npart)
+    print(npart)
 
     bins = [tally.ibins, tally.jbins, tally.kbins]
     coarses = [coarseimesh, coarsejmesh, coarsekmesh]
@@ -965,35 +952,32 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
         coarse.append(mesh[-1])
 
 #lets check
-    print('fineiints',fineiints)
-    print('finejints',finejints)
-    print('finekints',finekints)
-    print('coarseimesh',coarseimesh)
-    print('coarsejmesh',coarsejmesh)
-    print('coarsekmesh',coarsekmesh)
+    print('fineiints', fineiints)
+    print('finejints', finejints)
+    print('finekints', finekints)
+    print('coarseimesh', coarseimesh)
+    print('coarsejmesh', coarsejmesh)
+    print('coarsekmesh', coarsekmesh)
 
     with open(ofile,"w") as wwfile:
 
-#BLOCK 1        
+#BLOCK 1
         if tally.geom=="XYZ":
             igeom=10
-            x0 = tally.ibins[0]
-            y0 = tally.jbins[0]
-            z0 = tally.kbins[0]
+            [x0, y0, z0] = [tally.ibins[0], tally.jbins[0], tally.kbins[0]]
             nwg = 1
         else:
-            igeom = 16 
+            igeom = 16
             [x0, y0, z0] = tally.origin
             nwg = 2
+        wwfile.write("{:>10n}{:>10n}{:>10n}{:>10n}{:>20s}{probid}\n".format(1, 1, npart, igeom,
+                                                                            ' ', probid=wwinpID))
 
-        wwfile.write("{:>10n}{:>10n}{:>10n}{:>10n}                    {probid}\n".format(1,1,npart,igeom ,probid=wwinpID))
-#        wwfile.write("{:>10n}{:>10n}{:>10n}{:>10n}                    {probid}\n".format(1,1,npart,igeom ,probid=tally.probID))
-        
         ne = np.zeros(npart) # This is the equally named variable in the wwout file
         for tally in tallies:
             ne[IPT[tally.part]-1] = tally.eints
         # Second line, energies per particle types
-#        print(ne)
+        print(ne)
         for i, nei in enumerate(ne):
             wwfile.write("{:>10n}".format(nei))
             if (i+1) % 7 == 0 or i+1 == len(ne):
@@ -1002,31 +986,27 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
         #array of tally location:
         wwfile.write("{0:>13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n".
                      format(tally.iints,tally.jints,tally.kints,x0,y0,z0))
-        
+
         if igeom==10:  #remember, cartesian
-            wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}\n".format(len(coarseimesh)-1,len(coarsejmesh)-1,len(coarsekmesh)-1,1))
+            wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}\n".format(len(coarseimesh)-1,
+                                                                         len(coarsejmesh)-1,
+                                                                         len(coarsekmesh)-1, nwg))
         else: # cylindrical
-            x1 = x0+tally.axis[0]*(tally.jbins[-1] - tally.jbins[0])
-            y1 = y0+tally.axis[1]*(tally.jbins[-1] - tally.jbins[0])
-            z1 = z0+tally.axis[2]*(tally.jbins[-1] - tally.jbins[0])
+            [x1, y1, z1] = [x0, y0, z0] +tally.axis*(tally.jbins[-1] - tally.jbins[0])
+            [x2, y2, z2] = [x0, y0, z0] +tally.vec*(tally.jbins[-1] - tally.jbins[0])
+            wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n".format(len(coarseimesh)-1, len(coarsejmesh)-1, len(coarsekmesh)-1, x1, y1, z1))
+            wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}\n".format(x2, y2, z2, nwg))
 
-            x2 = x0+tally.vec[0]*(tally.ibins[-1] - tally.ibins[0])
-            y2 = y0+tally.vec[1]*(tally.ibins[-1] - tally.ibins[0])
-            z2 = z0+tally.vec[2]*(tally.ibins[-1] - tally.ibins[0])
-
-            wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n".format(len(coarseimesh)-1,len(coarsejmesh)-1,len(coarsekmesh)-1,x1,y1,z1))
-            wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}\n".format(x2,y2,z2,2))
-           
-# BLOCK 2 
+# BLOCK 2
         for [mesh, coarse, fine] in zip(bins, coarses, fines):
             mesharray = [mesh[0]]
-            for i,v in enumerate(fine):
+            for i, v in enumerate(fine):
                 mesharray.append(fine[i])
                 mesharray.append(coarse[i+1])
                 mesharray.append(1)
 
-            print('The mesh array is',mesharray)
-            for i in range(0,len(mesharray)-6,6):
+            print('The mesh array is', mesharray)
+            for i in range(0,len(mesharray)-6, 6):
                 wwfile.write(''.join('{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n'.format(*mesharray[i:i+6])))
             remains = np.mod(len(mesharray), 6) # the number of last elements of mesharray
 
@@ -1036,7 +1016,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
 #   BLOCK 3
         # We unroll all the tally values, since this is actually the "logic" of MCNP
         # and, while we are at it, scale and cap them. This must be done for all tallies
-    ntal=0
+    ntal = 0
     for tally in tallies:
         nwwma = tally.iints*tally.jints*tally.kints
         WW = np.zeros((nwwma, tally.eints))
@@ -1047,7 +1027,6 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
         idim = tally.ibins[-1]-tally.ibins[0]
         for i in range(tally.iints):
             WW_topcap[i] = (wmin[ntal])**(((tally.ibins[i]-tally.ibins[0])/idim*top_cap))
-#            print(WW_topcap[i, -1, -1])
 
         Wmax = WW.max()
         print('Max value=', Wmax)
@@ -1067,7 +1046,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
                 for j in range(tally.jints):
                     for i in range(tally.iints):
                         WW[l, e] = min(WW[l, e], WW_topcap[i, j, k])
-                        tally.value_ww[i,j,k,0]=WW[l,e]
+                        tally.value_ww[i, j, k, 0] = WW[l, e]
                         l = l+1
             if top_cap != 0:
                 cont = np.count_nonzero(tally.value_ww[:, :, :, e] == WW_topcap)
@@ -1085,7 +1064,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
                 remains=np.mod(len(WW),6) # the number of last elements of WW
                 if remains==0:
                     remains=6 # the number of elements is a multiple of 6, so the last line is full
-                wwfile.write(''.join('{0:13.5E}'.format(WW[-i,e]) for i in range(remains,0,-1)))
+                wwfile.write(''.join('{0:13.5E}'.format(WW[-i, e]) for i in range(remains,0, -1)))
                 wwfile.write('\n')
         ntal = ntal+1
     return
@@ -1106,7 +1085,7 @@ def conv_Cilind(Axs, Vec, origin, XYZ):
     Vec = np.array(Vec)
     origin = np.array(origin)
     XYZ = np.array(XYZ)
-    
+
     Axs = Axs/np.linalg.norm(Axs)
     Vec = Vec/np.linalg.norm(Vec)  # Normalize the Axs and Vec vector, just in case!!
     XYZ = XYZ-origin  # Displacement made
@@ -1153,9 +1132,6 @@ def conv_Cilindricas_multi(Axs,Vec,origin,XYZ):   #TODO: Should use the above fu
         if Theta<0:
             Theta=Theta+1
         Transformed.append([R,Z,Theta])
-#        j = j+1
-#        if ((j+1)% 1e5==0):
-#            print (j+1,' transformed points')
    #         print (Transformed[:-1])
     return(Transformed)
 
