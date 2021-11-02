@@ -317,8 +317,12 @@ def fgettally(tallystr):
     for e in range(eints):
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
-            tally.value[i, j, k, e+1] = line.split()[-2]
-            tally.error[i, j, k, e+1] = line.split()[-1]
+            try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
+                tally.value[i, j, k, e+1] = line.split()[-2]
+                tally.error[i, j, k, e+1] = line.split()[-1]
+            except:
+                tally.value[i, j, k, e+1] = 0.0
+                tally.error[i, j, k, e+1] = 0.0
     # We now have the values for the energy bins, but we are missing the totals.
     # This changes depending on wether we have
     # a single energy bin (eints=1) or more
@@ -328,8 +332,12 @@ def fgettally(tallystr):
     else:
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
-            tally.value[i, j, k, 0] = line.split()[-2]
-            tally.error[i, j, k, 0] = line.split()[-1]
+            try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
+                tally.value[i, j, k, e+1] = line.split()[-2]
+                tally.error[i, j, k, e+1] = line.split()[-1]
+            except:
+                tally.value[i, j, k, e+1] = 0.0
+                tally.error[i, j, k, e+1] = 0.0
     if Ttype == "Cyl":
         tally.geom = "Cyl"
         tally.origin = [float(l) for l in location[0:3]]
@@ -656,9 +664,9 @@ def vtkwrite(meshtal, ofile):
 
     elif meshtal.geom == "Cyl":
         angles = np.diff(meshtal.kbins)
-        if max(angles) > 0.1666:
-            print (' Smoothing angles above 60º\n')
-        smoothed_tally = meshtal.smoothang(0.166)
+        if max(angles) > 1/36:
+            print (' Smoothing angles above 10º\n')
+        smoothed_tally = meshtal.smoothang(1/36)
         kints = smoothed_tally.kints
         kbins = smoothed_tally.kbins  # we call the smoothing anyway, easier code that way
         value = [smoothed_tally.value[:, :, :, e].flatten(order="C") for e in range(meshtal.eints+1)]
