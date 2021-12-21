@@ -177,7 +177,7 @@ class MeshTally:
             for key in vars(self).keys():
                 if key not in ['part','probID','comment','iints','jints','kints','eints','ebins','geom','value','error']:
                     vars(Romesh)[key] = vars(self)[key]
-            for (i, j, k, e) in np.ndindex(Romesh.iints, Romesh.jints, Romesh.kints, Romesh.eints+1):
+            for (i, j, k) in np.ndindex(Romesh.iints, Romesh.jints, Romesh.kints):
                 if Ro[i,j,k] != 0:
                     if Ro[i,j,k] > 0:
                         Romesh.value[i,j,k,:] = Ro[i,j,k]
@@ -541,7 +541,7 @@ def updatearray(inparray, name=''):
 
 def copy(basetally, exclude=None):
     """
-    returns a copy of basetally, except for the parameters in exclude.
+    Returns a copy of basetally, except for the parameters in exclude.
     Notice that the spatial and energy ints can not be excluded.
     """
     result = MeshTally(basetally.iints, basetally.jints, basetally.kints, basetally.eints)
