@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from pyne import mcnp
 import sparse 
-from itertools import product
+from itertools import product, repeat
 
 def read_ptrac_head(ptrac_file):
     """Read and return the headers of an open ASCII ptrac file, ptrac_file"""
@@ -287,12 +287,19 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     jints = tally.jints
     kints = tally.kints
     ro = np.zeros((iints, jints, kints))
+    ro_error = np.zeros((iints, jints, kints))
     Ss = pmatrix.sum(axis=3)  # Total points or track length of the sampling/tracing
     for i in tqdm(range(iints), position=0):
         for j in range(jints):
             for k in range(kints):
+                Rolist = []
                 for c in pmatrix[i, j, k].nonzero()[0]:
-                    ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] +ro[i, j, k]
+#                    print(1,i,j,k,c,SortedCellist[c].density,pmatrix[i, j, k, c],Ss[i, j, k],ro[i, j, k])
+                    ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] + ro[i, j, k]
+                    [Rolist.append(x) for x in list(repeat(SortedCellist[c].density,pmatrix[i, j, k, c]))]
+                ro_error[i, j, k] = np.std(Rolist) / np.sqrt(Ss[i, j, k])
+                if ro_error[i, j, k] == 0 and Ss[i, j, k]/tally.volume[i, j, k] >= 2 and Ss[i, j, k] >= 2 :
+                    ro_error[i, j, k] = 1E-3
     if dumpfile!=None:
         with open(dumpfile,"w") as df:
             for i in range(iints):
@@ -301,8 +308,9 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
                     Y = (tally.jbins[j]+tally.jbins[j+1])/2
                     for k in range(kints):
                         Z = (tally.kbins[k]+tally.kbins[k+1])/2
-                        df.write("{0} {1} {2} {3:5.4g} {4:.0g}\n".format(X, Y, Z, ro[i,j,k],Ss[i, j, k]))
-    return ro,Ss
+                        df.write("{0} {1} {2} {3:5.4g} {4:5.2g} {5:.0g}\n".format(
+                                X, Y, Z, ro[i,j,k],ro_error[i, j, k],Ss[i, j, k]))
+    return ro,ro_error
 
 def mater2voxel(mat_list, cell_map, volumes):
     """ Generate a material distribution in a mesh, given a material list mat_list and a cell map 
@@ -319,7 +327,7 @@ def mater2voxel(mat_list, cell_map, volumes):
         i = m['C']
         mat_list_sorted[i] = m
     print ("Created cell material dictionary")
-    for i, j, k in product(range(iints), range(jints), range(kints)):
+    for i, j, k in np.ndindex(iints, jints, kints):
         if voxel_ID %1e4 == 0: print(voxel_ID)
         volume = volumes[i, j, k]
         sint_RoA = 0
@@ -345,9 +353,9 @@ def mater2voxel(mat_list, cell_map, volumes):
                 sint_RoG = sint_RoG + data*mat_list_sorted[cel]['RoG']/cell_total[i, j, k]
                 sint_mat.N = [int(iso[0]) for iso in lista_isotopes_comp]
                 sint_mat.M = [float(iso[1]) for iso in lista_isotopes_comp]
-#            linea=np.array((voxel_ID,i,j,k,sint_mat,sint_RoA,sint_RoG,volume),dtype=lvoxel)
-#            print(linea)
+
         sint_mat.normalize()  
+#        print('2',voxel_ID, i, j, k, sint_mat, sint_RoA, sint_RoG, volume)
         voxel_comp_index[voxel_ID]=(voxel_ID, i, j, k, sint_mat, sint_RoA, sint_RoG, volume)
         voxel_ID += 1
     return    voxel_comp_index
