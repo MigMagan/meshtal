@@ -432,7 +432,7 @@ def tgetall(tfile):
             if tallylist[tally].geom=="Cyl":
                 tallylist[tally].kbins[0] = 0
                 for k, v in enumerate(valores):
-                    tallylist[tally].kbins[k+1] = float(v)
+                    tallylist[tally].kbins[k+1] = float(v)/360
 
             for (k, j) in np.ndindex(kints, jints):
                 lines = meshtalfile.readline()
