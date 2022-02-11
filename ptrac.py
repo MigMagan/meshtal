@@ -3,6 +3,7 @@
 """"Module to sample densities in an MCNP mesh using ptrac.
 @author: Miguel Magán
 """
+from math import cos, sin, pi, sqrt, log, atan2
 import meshtal as mt
 import tracer
 import cell
@@ -224,7 +225,10 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     ibins = tally.ibins
     jbins = tally.jbins
     kbins = tally.kbins
-    mesh= tracer.Meshtal(ibins, jbins, kbins)
+    mesh= tracer.Meshtal(ibins, jbins, kbins, geom=tally.geom)
+    mesh.origin = tally.origin
+    mesh.axis = tally.axis
+    mesh.vec = tally.vec
     rays = len(cells)   
     steps = rays // chunksize +2  # We want a minimum of 2 steps even if rays<chunksize
 # Divide the lists into Chunks
@@ -318,6 +322,7 @@ def mater2voxel(mat_list, cell_map, volumes):
         sint_RoG = 0
         sint_mat = mat.mat(voxel_ID)
         if cell_total[i][j][k] == 0:
+            print("WARNING: Voxel {0} {1} {2} has no data!!".format(i, j, k))
             sint_mat.N = []
             sint_mat.M = []
         else:
@@ -342,4 +347,5 @@ def mater2voxel(mat_list, cell_map, volumes):
         sint_mat.normalize()  
         voxel_comp_index[voxel_ID]=(voxel_ID, i, j, k, sint_mat, sint_RoA, sint_RoG, volume)
         voxel_ID += 1
-    return    voxel_comp_index
+    return voxel_comp_index  #We are done
+

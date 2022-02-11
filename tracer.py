@@ -8,9 +8,10 @@ from pyne import mcnp
 from multiprocessing import Pool
 import tqdm
 from tqdm.contrib import tzip
+from math import atan2, pi
 
 class Meshtal: # Dummy meshtal class to run
-    def __init__(self, ibins, jbins, kbins):
+    def __init__(self, ibins, jbins, kbins, geom="XYZ"):
         iints = ibins.size - 1
         jints = jbins.size - 1
         kints = kbins.size - 1
@@ -21,9 +22,11 @@ class Meshtal: # Dummy meshtal class to run
         self.jints = jints
         self.kints = kints
         self.value = np.zeros((iints, kints, kints))
-
-def dummyfunc(i):
-    return 2*i
+        self.geom = geom
+        if self.geom == "Cyl":
+            self.axis = np.array([0, 0, 1])  # Axis
+            self.vec = np.array([1, 0, 0])   # Azimuthal vector
+            self.origin = np.array([0, 0, 0])
 
 def is_between(n1, n2, n):
     # Check if n is STRICTLY between n1 and n2, regardless of which one is greater.
@@ -34,8 +37,49 @@ def is_between(n1, n2, n):
     else:
         return False
 
-def raytracer(p1, p2, mesh, ncell=0):
-#   take a ray from array p1 to array p2, and add the contribution to mesh
+def __cyl_raytracer(p1, p2, mesh, ncell=0):
+    """Take a ray from array p1 to array p2 and add the contribution to a cylindrical mesh
+    The vector the points define MUST be parallel to the axis, and the mesh must have
+    normalized axis and vec"""
+    line = p2 -p1
+    if (np.cross(line, mesh.axis)/(np.linalg.norm(line)) > 1E-5).any():
+        print ("For ray tracing in cylindrical mesh, rays must be parallel to axis!")
+        return None, None
+#   Calculate non-changing Ro and Theta
+    p0 = p1 - mesh.origin
+    yvec = np.cross(mesh.axis, mesh.vec)
+    rvec = p0 - mesh.axis*np.dot(p0, mesh.axis)
+    r = np.linalg.norm(rvec)
+    if r> mesh.ibins[-1] or r<mesh.ibins[0]:
+        print("ray traced outside of mesh")
+        return None, None
+    t = atan2(np.dot(rvec, yvec), np.dot(rvec,mesh.vec)) % (2*pi)
+    t = t/ (2*pi) # To have it in revolutions
+    rindex = np.searchsorted(mesh.ibins, r)-1
+    tindex = np.searchsorted(mesh.kbins, t, side = "right")-1
+    
+    h1 = np.dot(p0, mesh.axis)  # initial height position
+    h2 = np.dot(p2-mesh.origin, mesh.axis)  # Final height position
+    h1 = max(0, min(h1, mesh.jbins[-1]))  # limit h1 and h2 to the mesh
+    h2 = max(0, min(h2, mesh.jbins[-1]))
+    if h1>h2:  # turn around if vector is counter-parallel to axis
+        aux = h1
+        h1 = h2
+        h2 = aux
+    elif h1 == h2:
+        return None, None
+    hindex1 = np.searchsorted(mesh.jbins, h1, side="right")-1
+    hindex2 = np.searchsorted(mesh.jbins, h2)-1
+    index = np.zeros((4, hindex2-hindex1+1), dtype=int)
+    index[0,:] = rindex
+    index[1,:] = [i for i in range(hindex1, hindex2+1)]
+    index[2,:] = tindex
+    index[3,:] = ncell
+    cdists = np.diff(mesh.jbins[hindex1+1:hindex2+1], prepend=h1, append=h2)
+    return index, cdists
+
+def __xyz_raytracer(p1, p2, mesh, ncell=0):
+    "take a ray from array p1 to array p2, and add the contribution to a cartesian mesh"
     line = p2 - p1
     uvw = (line)/np.linalg.norm(line)
     ibins = mesh.ibins
@@ -113,6 +157,14 @@ def raytracer(p1, p2, mesh, ncell=0):
     index[3,:] = ncell
     return index, cdists
 
+def raytracer(p1, p2, mesh, ncell=0):
+    if mesh.geom=="XYZ":
+        return __xyz_raytracer(p1, p2, mesh, ncell)
+    elif mesh.geom=="Cyl":
+        return __cyl_raytracer(p1, p2, mesh, ncell)
+    else:
+        print("unknown geometry type")
+        return None
 
 def get_rays(ptrac_file):
     """
