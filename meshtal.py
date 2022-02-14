@@ -496,19 +496,19 @@ def tgetall(tfile):
 
             lines = meshtalfile.readline()
             valores = lines.split()
-            tallylist[tally].ibins = [float(ibin) for ibin in valores]
+            tallylist[tally].ibins = np.array([float(ibin) for ibin in valores])
 
             lines = meshtalfile.readline()
             valores = lines.split()
-            tallylist[tally].jbins = [float(jbin) for jbin in valores]
+            tallylist[tally].jbins = np.array([float(jbin) for jbin in valores])
 
             lines = meshtalfile.readline()
             valores = lines.split()
 
             if tallylist[tally].geom == "XYZ":
-                tallylist[tally].kbins = [float(kbin) for kbin in valores]
+                tallylist[tally].kbins = np.array([float(kbin) for kbin in valores])
             if tallylist[tally].geom=="Cyl":
-                tallylist[tally].kbins[1:] = [float(kbin)/360 for kbin in valores]
+                tallylist[tally].kbins[1:] = np.array([float(kbin)/360 for kbin in valores])
                 tallylist[tally].kbins[0] = 0
             for (k, j) in np.ndindex(kints, jints):
                 lines = meshtalfile.readline()
