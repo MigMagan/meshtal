@@ -546,7 +546,7 @@ def copy(basetally, exclude=None):
     """
     result = MeshTally(basetally.iints, basetally.jints, basetally.kints, basetally.eints)
     for var in vars(basetally):
-        if var not in exclude:
+        if not exclude or var not in exclude:
             vars(result)[var] = vars(basetally)[var]
     return result
 
