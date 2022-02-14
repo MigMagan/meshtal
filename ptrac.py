@@ -3,6 +3,7 @@
 """"Module to sample densities in an MCNP mesh using ptrac.
 @author: Miguel Magán
 """
+from math import cos, sin, pi, sqrt, log, atan2
 import meshtal as mt
 import tracer
 import cell
