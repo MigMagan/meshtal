@@ -656,7 +656,7 @@ def Geoeq(*tallies):
     return True
 
 
-def vtkwrite(meshtal, ofile):
+def vtkwrite(meshtal, ofile, maxangle=1/6):
     """create an vtk file ofile from tally meshtal"""
     if meshtal.eints == 1:
         NFields = 2
@@ -684,9 +684,9 @@ def vtkwrite(meshtal, ofile):
 
     elif meshtal.geom == "Cyl":
         angles = np.diff(meshtal.kbins)
-        if max(angles) > 0.1666:
-            print (' Smoothing angles above 60º\n')
-        smoothed_tally = meshtal.smoothang(0.166)
+        if max(angles) > maxangle:
+            print (' Smoothing angles above {0}º\n'.format(360*maxangle))
+        smoothed_tally = meshtal.smoothang(maxangle)
         kints = smoothed_tally.kints
         kbins = smoothed_tally.kbins  # we call the smoothing anyway, easier code that way
         value = [smoothed_tally.value[:, :, :, e].flatten(order="C") for e in range(meshtal.eints+1)]
