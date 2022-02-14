@@ -11,7 +11,6 @@ import numpy as np
 from tqdm import tqdm
 from pyne import mcnp
 import sparse 
-from itertools import product
 
 def read_ptrac_head(ptrac_file):
     """Read and return the headers of an open ASCII ptrac file, ptrac_file"""
@@ -103,10 +102,11 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
         npart = head["v"][5][0]
         # print('Max number of particles in ptrac:', npart)  # Notice this is total, SRC may be less
         ptrac_completo=np.zeros((npart, 4))
+        print('\n Reading ptrac file')
         for j in tqdm(range(npart), position=0, unit="part", unit_scale=True):
             line = f.readline()
             if not line:
-                print ("ptrac apparently stopped at nps=", j)
+                print ("\nptrac apparently stopped at nps=", j)
                 break  # end of file
             tokens = line.split()
             Event_ID = int(tokens[1])
@@ -187,8 +187,8 @@ def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
     X3 = tally.kbins
     data = np.zeros((npart), dtype=int)
     index = np.zeros((4, npart), dtype=int)
-    print ("processing particles")
-    for j, point  in tqdm(enumerate(ptrac_var), position=0, unit="part", unit_scale=True, 
+    print ("\nprocessing particles")
+    for j, point  in tqdm(enumerate(ptrac_var), position=0, unit="part", unit_scale=True,
                           total=npart):
         iX1 = np.searchsorted(X1, point[0])-1
         iX2 = np.searchsorted(X2, point[1])-1
@@ -201,7 +201,9 @@ def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
     total_voxel = X1i*X2i*X3i
     total_voxel_low = np.count_nonzero(Ss < 10)
     total_voxel_no = total_voxel-np.count_nonzero(Ss)
-    ave_hits = sum(data)/total_voxel
+    ave_hits = np.mean(Ss).round(2)  #sum(data)/total_voxel
+    from collections import Counter
+    print('\nHits distribution (hits,voxels): ', Counter(Ss.flatten()).most_common(5))
     print('Average hits per voxel: ',ave_hits)
     print(total_voxel_low,' of ', total_voxel,' have less than 10 hits per voxel')
     if total_voxel_no!=0:
@@ -284,11 +286,9 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     kints = tally.kints
     ro = np.zeros((iints, jints, kints))
     Ss = pmatrix.sum(axis=3)  # Total points or track length of the sampling/tracing
-    for i in tqdm(range(iints), position=0):
-        for j in range(jints):
-            for k in range(kints):
-                for c in pmatrix[i, j, k].nonzero()[0]:
-                    ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] +ro[i, j, k]
+    for i, j, k in tqdm(list(np.ndindex(iints,jints,kints))):
+        for c in pmatrix[i, j, k].nonzero()[0]:
+            ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] + ro[i, j, k]
     if dumpfile!=None:
         with open(dumpfile,"w") as df:
             for i in range(iints):
@@ -297,8 +297,9 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
                     Y = (tally.jbins[j]+tally.jbins[j+1])/2
                     for k in range(kints):
                         Z = (tally.kbins[k]+tally.kbins[k+1])/2
-                        df.write("{0} {1} {2} {3:5.4g}\n".format(X, Y, Z, ro[i,j,k]))
-    return ro
+                        df.write("{0} {1} {2} {3:5.4g} {4:.0g}\n".format(
+                                X, Y, Z, ro[i,j,k],Ss[i, j, k]))
+    return ro, Ss
 
 def mater2voxel(mat_list, cell_map, volumes):
     """ Generate a material distribution in a mesh, given a material list mat_list and a cell map 
@@ -315,7 +316,7 @@ def mater2voxel(mat_list, cell_map, volumes):
         i = m['C']
         mat_list_sorted[i] = m
     print ("Created cell material dictionary")
-    for i, j, k in product(range(iints), range(jints), range(kints)):
+    for i, j, k in np.ndindex(iints, jints, kints):
         if voxel_ID %1e4 == 0: print(voxel_ID)
         volume = volumes[i, j, k]
         sint_RoA = 0
