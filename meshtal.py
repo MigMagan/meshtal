@@ -338,8 +338,12 @@ def fgettally(tallystr):
     for e in range(eints):
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
-            tally.value[i, j, k, e+1] = line.split()[-2]
-            tally.error[i, j, k, e+1] = line.split()[-1]
+            try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
+                tally.value[i, j, k, e+1] = line.split()[-2]
+                tally.error[i, j, k, e+1] = line.split()[-1]
+            except:
+                tally.value[i, j, k, e+1] = 0.0
+                tally.error[i, j, k, e+1] = 0.0
     # We now have the values for the energy bins, but we are missing the totals.
     # This changes depending on wether we have
     # a single energy bin (eints=1) or more
@@ -349,8 +353,12 @@ def fgettally(tallystr):
     else:
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
-            tally.value[i, j, k, 0] = line.split()[-2]
-            tally.error[i, j, k, 0] = line.split()[-1]
+            try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
+                tally.value[i, j, k, e+1] = line.split()[-2]
+                tally.error[i, j, k, e+1] = line.split()[-1]
+            except:
+                tally.value[i, j, k, e+1] = 0.0
+                tally.error[i, j, k, e+1] = 0.0
     if Ttype == "Cyl":
         tally.geom = "Cyl"
         tally.origin = [float(l) for l in location[0:3]]
@@ -468,8 +476,7 @@ def tgetall(tfile):
             tallylist[tally].geom = GEOM  # Geometry
             lines = meshtalfile.readline()
             valores = lines.split()
-            for e, v in enumerate(valores):
-                tallylist[tally].ebins[e] = float(v)
+            tallylist[tally].ebins = [float(ebin) for ebin in valores]
             UFO2 = meshtalfile.readline()
 # Headers are read. We now read the geometry, values, and error. Multi-particles tallies will cause this to crash.
 #        return tallylist
@@ -489,25 +496,20 @@ def tgetall(tfile):
 
             lines = meshtalfile.readline()
             valores = lines.split()
-            for i, v in enumerate(valores):
-                tallylist[tally].ibins[i] = float(v)
+            tallylist[tally].ibins = [float(ibin) for ibin in valores]
 
             lines = meshtalfile.readline()
             valores = lines.split()
-            for j, v in enumerate(valores):
-                tallylist[tally].jbins[j] = float(v)
+            tallylist[tally].jbins = [float(jbin) for jbin in valores]
 
             lines = meshtalfile.readline()
             valores = lines.split()
 
             if tallylist[tally].geom == "XYZ":
-                for k, v in enumerate(valores):
-                    tallylist[tally].kbins[k] = float(v)
+                tallylist[tally].kbins = [float(kbin) for kbin in valores]
             if tallylist[tally].geom=="Cyl":
+                tallylist[tally].kbins[1:] = [float(kbin)/360 for kbin in valores]
                 tallylist[tally].kbins[0] = 0
-                for k, v in enumerate(valores):
-                    tallylist[tally].kbins[k+1] = float(v)/360
-
             for (k, j) in np.ndindex(kints, jints):
                 lines = meshtalfile.readline()
                 valores = lines.split()
