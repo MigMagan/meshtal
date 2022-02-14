@@ -163,7 +163,7 @@ def _remove_below_frac(s, min_frac):
     s0 = sparse.COO(newcoords, newdata, shape=s.shape, prune=True)
     return s0
 
-def ptrac_point_sample(tally, ptrac_files, pformat="ASCII", min_frac=0):
+def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
     """ Return the fraction of cells present in each voxel of mesh tally tally,
     using a ptrac_file for tracing and outp_file for cell info. Result is a sparse matrix
     ptracformat: Format of ptrac, ASCII or BIN. Optionally, min_frac neglects fractions below 
@@ -174,14 +174,8 @@ def ptrac_point_sample(tally, ptrac_files, pformat="ASCII", min_frac=0):
     X1i = tally.iints # numero de divisiones en X
     X2i = tally.jints # numero de divisiones en Y
     X3i = tally.kints # numero de divisiones en Z
-    if type(ptrac_files) == list: # posible opcion para convinar varios ptrac (normalizacion???)
-        ptrac_var=np.zeros((0,4))
-        for i, ptrac_file in enumerate(ptrac_files):
-            ptrac_var_i = get_ptrac_src(ptrac_file, pformat=pformat)
-            ptrac_var = np.concatenate((ptrac_var,ptrac_var_i),axis=0)
-    if type(ptrac_files) == str: 
-        ptrac_var = get_ptrac_src(ptrac_files, pformat=pformat)
-# ============================ Transformacion de coordenadas ========================
+  # ============================ Transformacion de coordenadas ========================
+    ptrac_var = get_ptrac_src(ptrac_file, pformat=pformat)
     if tally.geom=="Cyl":
         ptrac_var[:,0:3] = mt.conv_Cilindricas_multi(tally.axis, tally.vec,
                                                      tally.origin, ptrac_var[:,0:3])
@@ -193,7 +187,8 @@ def ptrac_point_sample(tally, ptrac_files, pformat="ASCII", min_frac=0):
     data = np.zeros((npart), dtype=int)
     index = np.zeros((4, npart), dtype=int)
     print ("\nprocessing particles")
-    for j, point  in tqdm(enumerate(ptrac_var), position=0, unit="part", unit_scale=True, total=npart):
+    for j, point  in tqdm(enumerate(ptrac_var), position=0, unit="part", unit_scale=True,
+                          total=npart):
         iX1 = np.searchsorted(X1, point[0])-1
         iX2 = np.searchsorted(X2, point[1])-1
         iX3 = np.searchsorted(X3, point[2])-1
@@ -231,7 +226,10 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     ibins = tally.ibins
     jbins = tally.jbins
     kbins = tally.kbins
-    mesh= tracer.Meshtal(ibins, jbins, kbins)
+    mesh= tracer.Meshtal(ibins, jbins, kbins, geom=tally.geom)
+    mesh.origin = tally.origin
+    mesh.axis = tally.axis
+    mesh.vec = tally.vec
     rays = len(cells)   
     steps = rays // chunksize +2  # We want a minimum of 2 steps even if rays<chunksize
 # Divide the lists into Chunks
@@ -287,11 +285,9 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     kints = tally.kints
     ro = np.zeros((iints, jints, kints))
     Ss = pmatrix.sum(axis=3)  # Total points or track length of the sampling/tracing
-    for i in tqdm(range(iints), position=0):
-        for j in range(jints):
-            for k in range(kints):
-                for c in pmatrix[i, j, k].nonzero()[0]:
-                    ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] + ro[i, j, k]
+    for i, j, k in tqdm(list(np.ndindex(iints,jints,kints))):
+        for c in pmatrix[i, j, k].nonzero()[0]:
+            ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] + ro[i, j, k]
     if dumpfile!=None:
         with open(dumpfile,"w") as df:
             for i in range(iints):
@@ -326,6 +322,7 @@ def mater2voxel(mat_list, cell_map, volumes):
         sint_RoG = 0
         sint_mat = mat.mat(voxel_ID)
         if cell_total[i][j][k] == 0:
+            print("WARNING: Voxel {0} {1} {2} has no data!!".format(i, j, k))
             sint_mat.N = []
             sint_mat.M = []
         else:
@@ -345,9 +342,10 @@ def mater2voxel(mat_list, cell_map, volumes):
                 sint_RoG = sint_RoG + data*mat_list_sorted[cel]['RoG']/cell_total[i, j, k]
                 sint_mat.N = [int(iso[0]) for iso in lista_isotopes_comp]
                 sint_mat.M = [float(iso[1]) for iso in lista_isotopes_comp]
-
+#            linea=np.array((voxel_ID,i,j,k,sint_mat,sint_RoA,sint_RoG,volume),dtype=lvoxel)
+#            print(linea)
         sint_mat.normalize()  
-#        print('2',voxel_ID, i, j, k, sint_mat, sint_RoA, sint_RoG, volume)
         voxel_comp_index[voxel_ID]=(voxel_ID, i, j, k, sint_mat, sint_RoA, sint_RoG, volume)
         voxel_ID += 1
-    return    voxel_comp_index
+    return voxel_comp_index  #We are done
+

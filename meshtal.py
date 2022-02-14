@@ -2,7 +2,6 @@
 
 from math import cos, sin, pi, sqrt, log, atan2
 import numpy as np
-from tqdm import tqdm
 # from pylab import *
 
 # Particles dictionary
@@ -339,12 +338,8 @@ def fgettally(tallystr):
     for e in range(eints):
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
-            try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
-                tally.value[i, j, k, e+1] = line.split()[-2]
-                tally.error[i, j, k, e+1] = line.split()[-1]
-            except:
-                tally.value[i, j, k, e+1] = 0.0
-                tally.error[i, j, k, e+1] = 0.0
+            tally.value[i, j, k, e+1] = line.split()[-2]
+            tally.error[i, j, k, e+1] = line.split()[-1]
     # We now have the values for the energy bins, but we are missing the totals.
     # This changes depending on wether we have
     # a single energy bin (eints=1) or more
@@ -354,12 +349,8 @@ def fgettally(tallystr):
     else:
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
-            try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
-                tally.value[i, j, k, e+1] = line.split()[-2]
-                tally.error[i, j, k, e+1] = line.split()[-1]
-            except:
-                tally.value[i, j, k, e+1] = 0.0
-                tally.error[i, j, k, e+1] = 0.0
+            tally.value[i, j, k, 0] = line.split()[-2]
+            tally.error[i, j, k, 0] = line.split()[-1]
     if Ttype == "Cyl":
         tally.geom = "Cyl"
         tally.origin = [float(l) for l in location[0:3]]
@@ -509,8 +500,10 @@ def tgetall(tfile):
             if tallylist[tally].geom == "XYZ":
                 tallylist[tally].kbins = [float(kbin) for kbin in valores]
             if tallylist[tally].geom=="Cyl":
-                tallylist[tally].kbins[1:] = [float(kbin)/360 for kbin in valores]
                 tallylist[tally].kbins[0] = 0
+                for k, v in enumerate(valores):
+                    tallylist[tally].kbins[k+1] = float(v)/360
+
             for (k, j) in np.ndindex(kints, jints):
                 lines = meshtalfile.readline()
                 valores = lines.split()
@@ -542,12 +535,12 @@ def updatearray(inparray, name=''):
 
 def copy(basetally, exclude=None):
     """
-    Returns a copy of basetally, except for the parameters in exclude.
+    returns a copy of basetally, except for the parameters in exclude.
     Notice that the spatial and energy ints can not be excluded.
     """
     result = MeshTally(basetally.iints, basetally.jints, basetally.kints, basetally.eints)
     for var in vars(basetally):
-        if exclude == None or var not in exclude:
+        if var not in exclude:
             vars(result)[var] = vars(basetally)[var]
     return result
 
@@ -607,15 +600,15 @@ class HealthReport:
             colour=False
         minval = self.val[0].min()
         maxval = self.val[0].max()
-        print("Maximum value is {0:E}".format(maxval))
-        print("Minimum value is {0:E}".format(minval))
-        print("Minimum good value is {0:E} ".format(self.mingoodval(thresolds[0])))
-        print("Minimum relevant value is {0:E} ".format(self.mingoodval(thresolds[1])))
-        print("Tally nonzero elements are {0:.2%}".format(len(self.val[0])/self.nvox))
+        print("Maximum value is {0:E}\n".format(maxval))
+        print("Minimum value is {0:E}\n".format(minval))
+        print("Minimum good value is {0:E} \n".format(self.mingoodval(thresolds[0])))
+        print("Minimum relevant value is {0:E} \n".format(self.mingoodval(thresolds[1])))
+        print("Tally nonzero elements are {0:.2%}\n".format(len(self.val[0])/self.nvox))
         for i, j in enumerate(thresolds):
             ratio = self.fractionbelowE(thresolds[i])
             if colour == False:
-                print("{0:.2%} voxels are below {1:.2F} error".format(ratio, j))
+                print("{0:.2%} voxels are below {1:.2F} error\n".format(ratio, j))
             else:
                 if ratio<0.8:
                     redvalue = 255
@@ -623,7 +616,7 @@ class HealthReport:
                 else:
                     redvalue = 1275*(1-ratio)
                     greenvalue = 255
-                print(colr.color("{0:.2%} voxels are below {1:.2F} error",
+                print(colr.color("{0:.2%} voxels are below {1:.2F} error\n",
                       fore=(redvalue, greenvalue, 0)).format(ratio, j))
 
 
@@ -636,7 +629,6 @@ class HealthReport:
         plt.title("Error histogram for tally")
         plt.grid(True)
         plt.hist(self.err[ebin], cumulative=True, density=True, bins=nbins)
-
 ########################## END OF CLASS DEFINITION #############################################
 
 
@@ -686,9 +678,9 @@ def vtkwrite(meshtal, ofile):
 
     elif meshtal.geom == "Cyl":
         angles = np.diff(meshtal.kbins)
-        if max(angles) > 1/36:
-            print (' Smoothing angles above 10º\n')
-        smoothed_tally = meshtal.smoothang(1/36)
+        if max(angles) > 0.1666:
+            print (' Smoothing angles above 60º\n')
+        smoothed_tally = meshtal.smoothang(0.166)
         kints = smoothed_tally.kints
         kbins = smoothed_tally.kbins  # we call the smoothing anyway, easier code that way
         value = [smoothed_tally.value[:, :, :, e].flatten(order="C") for e in range(meshtal.eints+1)]
@@ -727,9 +719,9 @@ def vtkwrite(meshtal, ofile):
         VTKFile.write('CELL_DATA {N}\n'.format(N=nvoxels))
         VTKFile.write('FIELD FieldData {N} \n'.format(N=NFields))
         VTKFile.write('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
-        VTKFile.write(' '.join("%s" % v for v in value[-1])+'\n')
+        VTKFile.write(' '.join("%s" % v for v in value[0])+'\n')
         VTKFile.write('TotalError_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
-        VTKFile.write(' '.join("%s" % e for e in error[-1])+'\n')
+        VTKFile.write(' '.join("%s" % e for e in error[0])+'\n')
 
         if meshtal.eints > 1:
             for e in range(1, meshtal.eints+1):
@@ -872,17 +864,17 @@ def xyzput(tally,ofile):
                     if tally.geom=="Cyl":
                         R = (tally.ibins[i]+tally.ibins[i+1])/2
                         Z = (tally.jbins[j]+tally.jbins[j+1])/2
-                        Theta = (tally.kbins[k]+tally.kbins[k+1])/2
+                        Theta = (tally.kbins[k]+tally.kbins[k+1])/2*360 # in degrees better for CFD guys
                         XYZ = R*(XVEC*cos(2*pi*Theta)+YVEC*sin(2*pi*Theta))+Z*AXS+tally.origin
                         putfile.write("{0} {1} {2} {3} {4} {5} {6} {7}\n".format(R, Z, Theta, XYZ[0],XYZ[1],XYZ[2],
-                                          tally.value[i,j,k,-1],tally.error[i,j,k,-1]))
+                                      tally.value[i,j,k,-1],tally.error[i,j,k,-1]))
                     else:
                         X = (tally.ibins[i]+tally.ibins[i+1])/2
                         Y = (tally.jbins[j]+tally.jbins[j+1])/2
                         Z = (tally.kbins[k]+tally.kbins[k+1])/2
                         XYZ = [X,Y,Z]+tally.origin
                         putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[0],XYZ[1],XYZ[2],
-                                          tally.value[i,j,k,-1],tally.error[i,j,k,-1]))
+                                      tally.value[i,j,k,-1],tally.error[i,j,k,-1]))
 
 
 def fput(tallylist,ofile):
@@ -902,7 +894,6 @@ def wwrite_auto(ofile='wwout_auto',*tallies):
 
 # def wwrite(*tallies,ofile='wwout',scale=None,wmin=None):
 def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
-    #  TODO: Maybe we should rewrite this with **kwargs, even if it screws up virtually every script out there.
     # Bonus TODO: Implement wmin value for anything above an uncertainty.
     """ Write a MAGIC-like weight window file from tallies to ofile,
         using wmin minimal weight and scale agressivity.
@@ -1145,11 +1136,12 @@ def conv_Cilindricas_multi(Axs,Vec,origin,XYZ):   #TODO: Should use the above fu
     YVec = np.cross(Axs,Vec)
     Transformed = []
     XYZ = XYZ-origin
-    print("\nTransforming geometry")
+    print("Transforming geometry")
     for i in range(3):
         Axs[i]=Axs[i]/Axs2
         Vec[i]=Vec[i]/Vec2  # Normalize the Axs and Vec vector, just in case!!
-    for point in tqdm(XYZ,position=0, unit='part', unit_scale=True):
+        j = 0
+    for point in XYZ:
         L = np.linalg.norm(point)
         Z = np.dot(point,Axs)
         R2 = pow(L,2)-pow(Z,2)
@@ -1162,6 +1154,9 @@ def conv_Cilindricas_multi(Axs,Vec,origin,XYZ):   #TODO: Should use the above fu
         if Theta<0:
             Theta=Theta+1
         Transformed.append([R,Z,Theta])
+        j = j+1
+        if ((j+1)% 1e5==0):
+            print (j+1,' transformed points')
    #         print (Transformed[:-1])
     return(Transformed)
 
@@ -1302,51 +1297,42 @@ def ww_get(infile='wwinp'):
             for i in range(1,len(mesharray),3):
                 bins[dim,j+int(float(mesharray[i]))]=float(mesharray[i+1])
                 interval = (float(mesharray[i+1])-bins[dim,j])/int(float(mesharray[i]))
-#                print(interval)
+                print(interval)
                 for k in range(int(float(mesharray[i]))):
                     bins[dim, j+k] = bins[dim, j]+interval*k
                 j = j+int(float(mesharray[i]))
         ibins = bins[0, 0:iints+1]
         jbins = bins[1, 0:jints+1]
         kbins = bins[2, 0:kints+1]
-#        print(ibins)
-#        print(jbins)
-#        print(kbins)
+        print(ibins)
+        print(jbins)
+        print(kbins)
 
         for p in range(wwnpart):
             nwwma = iints*jints*kints
-#            print('nwwma',nwwma)
             ww_value = np.zeros((nwwma,eints[p]))
             ebins = np.zeros(1) 
             while True:
                 line = ww_file.readline()  # energy bin
-#                print(line)
+                print(line)
                 for e in line.split():
                     ebins = np.append(ebins, float(e))
                 if ebins.size>eints[p]:
                     break
-#            print(ebins)
-            min_value=1 
+            print(ebins)
             for e in range(eints[p]):
                 for i in range(0, nwwma, 6):
-                    line = ww_file.readline()
-#                    print(line)
-                    ndata_line = len(line.split()) # para que no pete si los voxel no son multiplos de 6
-#                    print(ndata_line)
-                    for j in range(0,ndata_line):
+                    line=ww_file.readline()
+                    for j in range(0,6):
                         ww_value[i+j, e] = float(line.split()[j])
-                        if min_value > float(line.split()[j]):
-                            min_value = float(line.split()[j])
-            print(min_value)
+                           
             if wwgeom == "10":
                 for e in range(eints[p]):
                     l=0
                     for k in range(kints):
                         for j in range(jints):
                             for i in range(iints):
-                                tallylist[p].value[i,j,k,e]=ww_value[l,e]
-                                if ww_value[l,e] != min_value:
-                                    tallylist[p].error[i,j,k,e] = 1 # add free info about real data of wwinp
+                                tallylist[p].value[i,j,k,e+1]=ww_value[l,e]
 #                  print(e,k,j,i,l,ww_value[l,e])
                                 l=l+1
             tallylist[p].ebins=ebins
@@ -1420,37 +1406,3 @@ def SEAM(*meshtalarray):
                     result.value[i, j, k, e] = np.dot(w, errors)/sum(w)
                     result.error[i, j, k, e] = minerror
     return result
-
-def ratio(RefTal,DivTal):
-    """ Makes a ratio between meshtally1 and meshtally2 (mesh1/mesh2).  Geometry must match or it will fail."""
-    Part = RefTal.part
-    ee = RefTal.ebins
-    print("checking tally consistency")
-
-    if not Geoeq(DivTal, RefTal):
-        print("Tally {ntally} Geometry does not match tally {nref}, adding them is beyond my current capabilites. Sorry".format(ntally=DivTal.n,nref=RefTal.n))
-        return None
-    if DivTal.part != Part:
-        confirm = input("Tally {ntally} and tally {nref}, are for different particles. Do you REALLY know what you are doing??(Y/N).".format(ntally=DivTal.n,nref=RefTal.n))
-        if confirm not in ["Y","y"]:
-            print("Cancelling")
-            return None
-        else:
-            print("Very well")
-    if not np.array_equal(DivTal.ebins, ee):
-        print("WARNING: Energy bins not matching. This can be OK, but make sure you know what you are doing!")
-    Result = copy(RefTal, exclude=['probID', 'comment', 'value', 'error'])
-    Result.probID = "Generated by meshtal class from {probID}".format(probID=RefTal.probID)
-    Result.comment = "Tallies compared: {0}/{1}".format(RefTal.n,DivTal.n)
-    for (i, j, k, e) in np.ndindex(Result.iints, Result.jints, Result.kints, Result.eints+1):
-        if DivTal.value[i,j,k,e] != 0:
-            Result.value[i,j,k,e] = RefTal.value[i,j,k,e]/DivTal.value[i,j,k,e]
-            if RefTal.error[i,j,k,e] == 1 or DivTal.error[i,j,k,e] == 1:
-                Result.error[i,j,k,e] = 1
-            else:
-                Result.error[i,j,k,e] = (sqrt(pow(RefTal.error[i,j,k,e],2) + pow(DivTal.error[i,j,k,e],2)))
-        else:
-            Result.value[i,j,k,e] = 0
-            Result.error[i,j,k,e] = 0
-#        print(i, j, k, e, Result.value[i,j,k,e], Result.error[i,j,k,e])
-    return Result
