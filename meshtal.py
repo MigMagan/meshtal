@@ -541,12 +541,12 @@ def updatearray(inparray, name=''):
 
 def copy(basetally, exclude=None):
     """
-    returns a copy of basetally, except for the parameters in exclude.
+    Returns a copy of basetally, except for the parameters in exclude.
     Notice that the spatial and energy ints can not be excluded.
     """
     result = MeshTally(basetally.iints, basetally.jints, basetally.kints, basetally.eints)
     for var in vars(basetally):
-        if var not in exclude:
+        if exclude == None or var not in exclude:
             vars(result)[var] = vars(basetally)[var]
     return result
 
