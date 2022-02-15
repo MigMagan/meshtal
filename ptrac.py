@@ -229,8 +229,9 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     kbins = tally.kbins
     mesh= tracer.Meshtal(ibins, jbins, kbins, geom=tally.geom)
     mesh.origin = tally.origin
-    mesh.axis = tally.axis
-    mesh.vec = tally.vec
+    if mesh.geom == "Cyl":
+        mesh.axis = tally.axis
+        mesh.vec = tally.vec
     rays = len(cells)   
     steps = rays // chunksize +2  # We want a minimum of 2 steps even if rays<chunksize
 # Divide the lists into Chunks
