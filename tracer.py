@@ -57,11 +57,10 @@ def __cyl_raytracer(p1, p2, mesh, ncell=0):
     t = t/ (2*pi) # To have it in revolutions
     rindex = np.searchsorted(mesh.ibins, r)-1
     tindex = np.searchsorted(mesh.kbins, t, side = "right")-1
-    
     h1 = np.dot(p0, mesh.axis)  # initial height position
     h2 = np.dot(p2-mesh.origin, mesh.axis)  # Final height position
-    h1 = max(0, min(h1, mesh.jbins[-1]))  # limit h1 and h2 to the mesh
-    h2 = max(0, min(h2, mesh.jbins[-1]))
+    h1 = max(mesh.jbins[0], min(h1, mesh.jbins[-1]))  # limit h1 and h2 to the mesh
+    h2 = max(mesh.jbins[0], min(h2, mesh.jbins[-1]))
     if h1>h2:  # turn around if vector is counter-parallel to axis
         aux = h1
         h1 = h2
