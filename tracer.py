@@ -69,7 +69,7 @@ def __cyl_raytracer(p1, p2, mesh, ncell=0):
         return None, None
     hindex1 = np.searchsorted(mesh.jbins, h1, side="right")-1
     hindex2 = np.searchsorted(mesh.jbins, h2)-1
-    index = np.zeros((4, hindex2-hindex1+1), dtype="int16")
+    index = np.zeros((4, hindex2-hindex1+1), dtype="int32")
     index[0,:] = rindex
     index[1,:] = [i for i in range(hindex1, hindex2+1)]
     index[2,:] = tindex
