@@ -246,7 +246,11 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     with Pool(cores) as p:
         s0 = p.starmap(tracer.trace_list, tqdm(starargs, total=nchunks), chunksize=1)
         # s0 = p.imap_unordered(do_work, starargs)
-    s = sum(s0)
+    # Pad so that all matrix has the same size
+    maxncells = max([s.shape[3] for s in s0])
+    s1 = [sparse.pad(s,[0, 0, 0, maxncells-s.shape[3]]) for s in s0]
+
+    s = sum(s1)
     Ss = s.sum(axis=3).todense()
     total_voxel = s.shape[0]*s.shape[1]*s.shape[2]
     total_voxel_no = total_voxel-np.count_nonzero(Ss)
