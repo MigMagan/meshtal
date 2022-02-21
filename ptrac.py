@@ -3,13 +3,13 @@
 """"Module to sample densities in an MCNP mesh using ptrac.
 @author: Miguel Magán
 """
-import meshtal as mt
-import tracer
-import cell
 import numpy as np
 from tqdm import tqdm
 from pyne import mcnp
 import sparse
+import meshtal as mt
+import cell
+import tracer
 
 def read_ptrac_head(ptrac_file):
     """Read and return the headers of an open ASCII ptrac file, ptrac_file"""
@@ -225,7 +225,7 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     ibins = tally.ibins
     jbins = tally.jbins
     kbins = tally.kbins
-    mesh= tracer.Meshtal(ibins, jbins, kbins, geom=tally.geom)
+    mesh = tracer.Meshtal(ibins, jbins, kbins, geom=tally.geom)
     mesh.origin = tally.origin
     if mesh.geom == "Cyl":
         mesh.axis = tally.axis
