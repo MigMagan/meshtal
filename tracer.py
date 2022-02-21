@@ -151,7 +151,7 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
     cdists = np.diff(cdists[first:last], prepend=0)
     cells = cells[first:last]
     # print(cells)
-    index = np.zeros((4, cells.shape[0]), dtype="int16")
+    index = np.zeros((4, cells.shape[0]), dtype="int32")
     index[0:3] = np.transpose(cells)
     index[3,:] = ncell
     return index, cdists
