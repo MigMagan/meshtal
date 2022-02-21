@@ -3,14 +3,13 @@
 """"Module to sample densities in an MCNP mesh using ptrac.
 @author: Miguel Magán
 """
-from math import cos, sin, pi, sqrt, log, atan2
 import meshtal as mt
 import tracer
 import cell
 import numpy as np
 from tqdm import tqdm
 from pyne import mcnp
-import sparse 
+import sparse
 
 def read_ptrac_head(ptrac_file):
     """Read and return the headers of an open ASCII ptrac file, ptrac_file"""
@@ -97,7 +96,7 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
     """ Return an array of Nx3 with the X, Y, Z coordinates and cell of all src events
     in a ptrac_file. Use pformat="BIN" to read a binary PTRAC """
     if pformat.capitalize() == "Ascii":
-        f = open(ptrac_file, 'r')
+        f = open(ptrac_file, 'r', encoding="UTF-8")
         head = read_ptrac_head(f)
         npart = head["v"][5][0]
         # print('Max number of particles in ptrac:', npart)  # Notice this is total, SRC may be less
@@ -143,7 +142,7 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
                 break  # no more entries
             while p.next_event != 9000:
                 p.read_event_line(event)
-                if (event["event_type"] == 1000):
+                if event["event_type"] == 1000:
                     ptrac_completo[i] = [event['xxx'], event['yyy'], event['zzz'], event['ncl']]
                     i+=1
         return ptrac_completo[:i]
@@ -152,8 +151,8 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
 def _remove_below_frac(s, min_frac):
     """ Remove all data for a sparse matrix s that is below min_frac"""
     total = s.sum(axis=3).todense()
-    del_index =[]
-    m=0
+    del_index = []
+    m = 0
     for point, n in zip (s.coords.T, s.data):
         i, j, k = point[0:3]
         if n < min_frac*total[i, j, k]:
@@ -167,7 +166,7 @@ def _remove_below_frac(s, min_frac):
 def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
     """ Return the fraction of cells present in each voxel of mesh tally tally,
     using a ptrac_file for tracing and outp_file for cell info. Result is a sparse matrix
-    ptracformat: Format of ptrac, ASCII or BIN. Optionally, min_frac neglects fractions below 
+    ptracformat: Format of ptrac, ASCII or BIN. Optionally, min_frac neglects fractions below
     that value, which may be caused by rounding errors, specially when using ASCII ptracs"""
     if not hasattr(tally,'value'):
         print("Uh, uh, First argument does not seem like a meshtal object. Quitting.")
@@ -210,9 +209,8 @@ def ptrac_point_sample(tally, ptrac_file, pformat="ASCII", min_frac=0):
         print(total_voxel_no,' of ', total_voxel,' have no hits TAKE CARE!!!')
     if min_frac ==0:
         return s
-    else:
-        s0 = _remove_below_frac(s, min_frac)
-        return s0
+    s0 = _remove_below_frac(s, min_frac)
+    return s0
 
 
 def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=None, min_frac=0):
@@ -232,7 +230,7 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     if mesh.geom == "Cyl":
         mesh.axis = tally.axis
         mesh.vec = tally.vec
-    rays = len(cells)   
+    rays = len(cells)
     steps = rays // chunksize +2  # We want a minimum of 2 steps even if rays<chunksize
 # Divide the lists into Chunks
     n = np.linspace(0, rays-1, steps, dtype=int)
@@ -257,9 +255,8 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
         print(total_voxel_no,' of ', total_voxel,' have no hits TAKE CARE!!!')
     if min_frac ==0:
         return s
-    else:
-        s0 = _remove_below_frac(s, min_frac)
-        return s0
+    s0 = _remove_below_frac(s, min_frac)
+    return s0
 
 
 def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", dumpfile=None):
@@ -290,11 +287,11 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     kints = tally.kints
     ro = np.zeros((iints, jints, kints))
     Ss = pmatrix.sum(axis=3)  # Total points or track length of the sampling/tracing
-    for i, j, k in tqdm(list(np.ndindex(iints,jints,kints))):
+    for i, j, k in tqdm(list(np.ndindex(iints, jints, kints))):
         for c in pmatrix[i, j, k].nonzero()[0]:
             ro[i, j, k] = SortedCellist[c].density*pmatrix[i, j, k, c]/Ss[i, j, k] + ro[i, j, k]
-    if dumpfile!=None:
-        with open(dumpfile,"w") as df:
+    if dumpfile is not None:
+        with open(dumpfile,"w", encoding="UTF-8") as df:
             for i in range(iints):
                 X = (tally.ibins[i]+tally.ibins[i+1])/2
                 for j in range(jints):
@@ -306,12 +303,13 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
     return ro, Ss
 
 def mater2voxel(mat_list, cell_map, volumes):
-    """ Generate a material distribution in a mesh, given a material list mat_list and a cell map 
+    """ Generate a material distribution in a mesh, given a material list mat_list and a cell map
     cell_map and a volumes matrix."""
     import material as mat
     cell_total = cell_map.sum(axis=3).todense()
     iints, jints, kints = cell_map.shape[0:3]
-    lvoxel = np.dtype([('voxel_ID',int),('i',int),('j',int),('k',int),('Material',object),('RoA',float),('RoG',float),('volume',float)])
+    lvoxel = np.dtype([('voxel_ID',int), ('i',int), ('j',int), ('k',int), ('Material',object),
+                       ('RoA',float), ('RoG',float), ('volume',float)])
     voxel_comp_index = np.zeros((iints*jints*kints),dtype=lvoxel)
     voxel_ID = 0
     mat_list_sorted = {}  # Dictionary for cells.
@@ -321,7 +319,8 @@ def mater2voxel(mat_list, cell_map, volumes):
         mat_list_sorted[i] = m
     print ("Created cell material dictionary")
     for i, j, k in np.ndindex(iints, jints, kints):
-        if voxel_ID %1e4 == 0: print(voxel_ID)
+        if voxel_ID %1e4 == 0:
+            print(voxel_ID)
         volume = volumes[i, j, k]
         sint_RoA = 0
         sint_RoG = 0
@@ -349,8 +348,7 @@ def mater2voxel(mat_list, cell_map, volumes):
                 sint_mat.M = [float(iso[1]) for iso in lista_isotopes_comp]
 #            linea=np.array((voxel_ID,i,j,k,sint_mat,sint_RoA,sint_RoG,volume),dtype=lvoxel)
 #            print(linea)
-        sint_mat.normalize()  
+        sint_mat.normalize()
         voxel_comp_index[voxel_ID]=(voxel_ID, i, j, k, sint_mat, sint_RoA, sint_RoG, volume)
         voxel_ID += 1
     return voxel_comp_index  #We are done
-
