@@ -180,6 +180,7 @@ def get_rays(ptrac_file):
         except EOFError:
             break  # no more entries
         p.read_event_line(event)
+        nevents+=1
         while p.next_event != 9000:
             p.read_event_line(event)
             nevents+=1
@@ -189,26 +190,19 @@ def get_rays(ptrac_file):
     final_points = [None]*nevents
     cells = [None]*nevents
     p = mcnp.PtracReader(ptrac_file)
-    i = 0
-    while True:
-        try:
-            p.read_nps_line()
-        except EOFError:
-            break  # no more entries
+    p.read_nps_line()
+    for i in tqdm.tqdm(range(nevents), position=0, unit="event", unit_scale=True):
         p.read_event_line(event)
         init_points[i] = np.array([event['xxx'], event['yyy'], event['zzz']])
-        c = int(event['ncl'])
-        while p.next_event != 9000:
-            p.read_event_line(event)
+        cells[i] = int(event['ncl'])
+        if p.next_event != 9000:
             final_points[i] = np.array([event['xxx'], event['yyy'], event['zzz']])
-            cells[i] = c
-            # Take these values for next point
-            i+=1
-            if i == nevents:
-                break
-            init_points[i] = np.array([event['xxx'], event['yyy'], event['zzz']])
-            c = int(event['ncl'])
-    
+        else:
+            final_points[i] = np.array([None, None, None])
+            try:
+                p.read_nps_line()
+            except EOFError:
+                break  # no more entries
     return init_points, final_points, cells
 
 def trace_list(initp, finalp, cells, mesh):
@@ -218,10 +212,26 @@ def trace_list(initp, finalp, cells, mesh):
     ncells = max(cells)
     index = [[] for _ in range(4)]
     data = []
+# Determine tracing direction
+    direction = 0
+    i = 0
+    while direction == 0:
+        try:
+            direction = finalp[i][1] - initp[i][1]
+        except TypeError:
+            i+=1
+
+    if direction > 0:
+        mesh_axial = mesh.jbins[-1]
+    else:
+        mesh_axial = mesh.jbins[0]
+
     for i, cell in enumerate(cells):
         if (initp[i] == finalp[i]).all():
             continue  # Coincident points usually mean termination after entering IMP=0 zone
-        a, b = raytracer(initp[i],finalp[i], mesh, cell)
+        if (finalp[i] == None).all():
+            finalp[i] = np.array[initp[i][0], mesh_axial, initp[i][2]]
+            a, b = raytracer(initp[i],finalp[i], mesh, cell)
         if a is not None:
             for j in range(4):
                 for k in a[j]:
