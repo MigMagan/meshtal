@@ -195,10 +195,11 @@ def get_rays(ptrac_file):
         p.read_event_line(event)
         init_points[i] = np.array([event['xxx'], event['yyy'], event['zzz']])
         cells[i] = int(event['ncl'])
-        if p.next_event != 9000:
-            final_points[i] = np.array([event['xxx'], event['yyy'], event['zzz']])
+        if event["event_type"] != 1000:
+            final_points[i-1] = np.array([event['xxx'], event['yyy'], event['zzz']])
         else:
-            final_points[i] = np.array([None, None, None])
+            final_points[i-1] = np.array([None, None, None])
+        if p.next_event == 9000:
             try:
                 p.read_nps_line()
             except EOFError:
