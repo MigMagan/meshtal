@@ -233,7 +233,7 @@ def trace_list(initp, finalp, cells, mesh):
             continue  # Coincident points usually mean termination after entering IMP=0 zone
         if (finalp[i] == None).all():
             finalp[i] = np.array([initp[i][0], mesh_axial, initp[i][2]])
-            a, b = raytracer(initp[i],finalp[i], mesh, cell)
+        a, b = raytracer(initp[i],finalp[i], mesh, cell)
         if a is not None:
             for j in range(4):
                 for k in a[j]:
