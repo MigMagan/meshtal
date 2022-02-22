@@ -221,7 +221,8 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
     if pformat.capitalize() == "Ascii":
         print ("ASCII reading not implemented for ray tracing")
         return None
-    initp, finalp, cells = tracer.get_rays(ptrac_file)
+    init0, fin0, cell0 = tracer.get_rays(ptrac_file)
+    initp, finalp, cells = tracer.postprocess_rays(init0, fin0, cell0)
     ibins = tally.ibins
     jbins = tally.jbins
     kbins = tally.kbins
