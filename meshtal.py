@@ -186,7 +186,7 @@ class MeshTally:
                         Romesh.error[i,j,k,:] = Ss[i, j, k]
                 else:
                     Romesh.value[i,j,k,:] = 0
-                    Romesh.error[i,j,k,:] = Ss[i, j, k]
+                    Romesh.error[i,j,k,:] = 0
             vtkwrite(Romesh,saveRomesh+'.vtk')
             return Result, Romesh
         return Result
