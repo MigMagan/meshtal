@@ -206,6 +206,32 @@ def get_rays(ptrac_file):
                 break  # no more entries
     return init_points, final_points, cells
 
+
+def postprocess_rays(init_points, final_points, cells, inf_distance=1000):
+    """Post-process the points given to either assign coordinates to the null points
+    or delete them if they can not be tracked"""
+    r0 = []
+    r1 = []
+    r2 = []
+    print("postprocessing ray list")
+    for i, point in tqdm.tqdm(enumerate(final_points), unit ="rays", position=0, unit_scale=True):
+        if (point == None).all():
+            if (final_points[i-1] == init_points[i]).all():  # tracable ray
+                direction = final_points[i-1] - init_points[i-1]
+                r0.append(init_points[i])
+                r1.append(init_points[i]+direction*inf_distance/np.linalg.norm(direction))
+                r2.append(cells[i])
+            else:  # Non-tracable. Discard the point
+                pass
+        else:
+            r0.append(init_points[i])
+            r1.append(final_points[i])
+            r2.append(cells[i])
+    discarded = len(cells) - len(r2)
+    print("\n{0} points out of {1} were discarded".format(discarded, len(cells)))
+    return r0, r1, r2
+
+
 def trace_list(initp, finalp, cells, mesh):
     """ helper function that takes init points, final points, and cells arrays, and returns a 
     sparse matrix with the tracing in mesh. Notice that the list should be limited in length
@@ -213,26 +239,9 @@ def trace_list(initp, finalp, cells, mesh):
     ncells = max(cells)
     index = [[] for _ in range(4)]
     data = []
-# Determine tracing direction
-    direction = 0
-    i = 0
-    while direction == 0:
-        try:
-            direction = finalp[i][1] - initp[i][1]
-        except TypeError:
-            i+=1
-
-    if direction > 0:
-        mesh_axial = mesh.jbins[-1]
-    else:
-        mesh_axial = mesh.jbins[0]
-
-    a = b = None
     for i, cell in enumerate(cells):
         if (initp[i] == finalp[i]).all():
             continue  # Coincident points usually mean termination after entering IMP=0 zone
-        if (finalp[i] == None).all():
-            finalp[i] = np.array([initp[i][0], mesh_axial, initp[i][2]])
         a, b = raytracer(initp[i],finalp[i], mesh, cell)
         if a is not None:
             for j in range(4):
