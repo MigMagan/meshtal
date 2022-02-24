@@ -444,14 +444,14 @@ def tgetall(tfile):
         valores = lines.split()
         ntallies = int(valores[0]) # Nº tallies
         VMCNP = valores[2]
-        print(ntallies, " tallies found calculated using MCNP", VMCNP)
+        print(ntallies, " tallies found in file {0}.".format(tfile))
         nps = valores[-1] # Should be NPS problem
         tallylist = []
         for tally in range(ntallies):
             UFO1 = meshtalfile.readline() # TODO: What is that?
             lines = meshtalfile.readline()
             valores = lines.split()
-            print(int(valores[0]))
+#            print(int(valores[0]))
             if int( valores[0]) // 10 == 1:
                 GEOM = "XYZ"
             elif int(valores[0]) // 10 == 2:
@@ -483,7 +483,7 @@ def tgetall(tfile):
 
         UFO3 = meshtalfile.readline()
         for tally in range(ntallies):
-            print("getting tally", tally)
+            print("Getting tally ID number = {0}".format(tallylist[tally].n))
             iints = tallylist[tally].iints
             jints = tallylist[tally].jints
             kints = tallylist[tally].kints
