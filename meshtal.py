@@ -95,9 +95,9 @@ class MeshTally:
         while select not in ['y', 'n']:
             select = input('Choose, y o n:')
         if select == 'y':
-            updatearray(neworigin)
-            updatearray(newaxis)
-            updatearray(newvec)
+            updatearray(neworigin, "origin")
+            updatearray(newaxis, "axis")
+            updatearray(newvec, "VEC")
             projection = np.dot(newvec, newaxis)/np.linalg.norm(newaxis)**2
             newvec = newvec - projection*newaxis
             if np.linalg.norm(newvec) == 0:
