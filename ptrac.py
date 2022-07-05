@@ -299,7 +299,7 @@ def romesh(tally, ptrac_file, outp_file, method="pointsample", pformat="Ascii", 
                     Y = (tally.jbins[j]+tally.jbins[j+1])/2
                     for k in range(kints):
                         Z = (tally.kbins[k]+tally.kbins[k+1])/2
-                        df.write("{0} {1} {2} {3:5.4g} {4:.0g}\n".format(
+                        df.write("{0} {1} {2} {3:5.4g} {4:5.4g}\n".format(
                                 X, Y, Z, ro[i,j,k],Ss[i, j, k]))
     return ro, Ss
 
