@@ -148,7 +148,7 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
                     break
     # print(cells)
     # print(cdir)
-    cdists = np.diff(cdists[first:last], prepend=0)
+    cdists = np.diff(cdists, prepend=0)[first:last]
     cells = cells[first:last]
     # print(cells)
     index = np.zeros((4, cells.shape[0]), dtype="int32")
