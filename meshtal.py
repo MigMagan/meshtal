@@ -871,9 +871,10 @@ def voxelmerge(meshtal, voxelmap):
     return  {'value':Ave, 'error':Err}
 
 
-def xyzput(tally,ofile):
+def xyzput(tally,ofile, writezeros=True):
     """Write a meshtal point list in ofile with the data of tally.
-    Autoconvert if tally is cylindrical """
+    Autoconvert if tally is cylindrical. Setting writezeros to False skips all
+    lines with value=0"""
 #Preliminary check
     if type(tally)!=MeshTally:
         print("Argument #0 is not a meshtally object")
@@ -885,11 +886,12 @@ def xyzput(tally,ofile):
     with open(ofile+'.csv', "w") as putfile:
         putfile.write('X Y Z TallyValue TallyError\n')
         for i, voxel in enumerate(val):
-            putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
+            if writezeros==True or val[i]!=0:
+                putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
                                                          val[i], err[i]))
 
 
-def multixyzput(tallylist,ofile):
+def multixyzput(tallylist,ofile, writezeros=True):
     """Write a meshtal point list in ofile with the data of a list of Meshtal 
     tallylist. Autoconvert if any tally is cylindrical """
 #Preliminary check
@@ -900,7 +902,8 @@ def multixyzput(tallylist,ofile):
             err = tally.error[:,:,:,-1].flatten()
             XYZ = tally._xyz()
             for i, voxel in enumerate(val):
-                putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
+                if writezeros==True or val[i]!=0:
+                    putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
                                                              val[i], err[i]))
 
 def fput(tallylist,ofile):
