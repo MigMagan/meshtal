@@ -221,6 +221,30 @@ class MeshTally:
         else:
             return value, error
 
+
+    def _xyz(self):
+        "Internal to return a list with x y z for each voxel"
+        XYZ = []
+        if self.geom=="Cyl":
+            AXS = self.axis
+            XVEC = self.vec
+            YVEC = np.cross(AXS,XVEC)
+            for i in range(self.iints):
+                R = (self.ibins[i]+self.ibins[i+1])/2
+                for j in range(self.jints):
+                    Z = (self.jbins[j]+self.jbins[j+1])/2
+                    for k in range(self.kints):
+                        Theta = (self.kbins[k]+self.kbins[k+1])/2*360 # in degrees better for CFD guys
+                        XYZ.append(R*(XVEC*cos(2*pi*Theta)+YVEC*sin(2*pi*Theta))+Z*AXS+self.origin)
+        else:
+            for i in range(self.iints):
+                X = (self.ibins[i]+self.ibins[i+1])/2
+                for j in range(self.jints):
+                    Y = (self.jbins[j]+self.jbins[j+1])/2
+                    for k in range(self.kints):
+                        Z = (self.kbins[k]+self.kbins[k+1])/2
+                        XYZ.append([X,Y,Z]+self.origin)
+        return XYZ
 # ======================= END OF CLASS DEFINITION ==========================
 
 def flist(infile='meshtal'):
@@ -847,41 +871,40 @@ def voxelmerge(meshtal, voxelmap):
     return  {'value':Ave, 'error':Err}
 
 
-def xyzput(tally,ofile):
+def xyzput(tally,ofile, writezeros=True):
     """Write a meshtal point list in ofile with the data of tally.
-    Autoconvert if tally is cylindrical """
+    Autoconvert if tally is cylindrical. Setting writezeros to False skips all
+    lines with value=0"""
 #Preliminary check
     if type(tally)!=MeshTally:
         print("Argument #0 is not a meshtally object")
     if tally.eints > 1:
         print("WARNING: Multiple energy tally. Dumping only total energy")
-    if tally.geom=="Cyl":
-        AXS = tally.axis
-        XVEC = tally.vec
-        YVEC = np.cross(AXS,XVEC)
+    val = tally.value[:,:,:,-1].flatten()
+    err = tally.error[:,:,:,-1].flatten()
+    XYZ = tally._xyz()
     with open(ofile+'.csv', "w") as putfile:
-        if tally.geom=="Cyl":
-            putfile.write('R Z Theta X Y Z TallyValue TallyError\n')
-        else:
-            putfile.write('X Y Z TallyValue TallyError\n')
-        for i in range(tally.iints):
-            for j in range(tally.jints):
-                for k in range(tally.kints):
-                    if tally.geom=="Cyl":
-                        R = (tally.ibins[i]+tally.ibins[i+1])/2
-                        Z = (tally.jbins[j]+tally.jbins[j+1])/2
-                        Theta = (tally.kbins[k]+tally.kbins[k+1])/2*360 # in degrees better for CFD guys
-                        XYZ = R*(XVEC*cos(2*pi*Theta)+YVEC*sin(2*pi*Theta))+Z*AXS+tally.origin
-                        putfile.write("{0} {1} {2} {3} {4} {5} {6} {7}\n".format(R, Z, Theta, XYZ[0],XYZ[1],XYZ[2],
-                                      tally.value[i,j,k,-1],tally.error[i,j,k,-1]))
-                    else:
-                        X = (tally.ibins[i]+tally.ibins[i+1])/2
-                        Y = (tally.jbins[j]+tally.jbins[j+1])/2
-                        Z = (tally.kbins[k]+tally.kbins[k+1])/2
-                        XYZ = [X,Y,Z]+tally.origin
-                        putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[0],XYZ[1],XYZ[2],
-                                      tally.value[i,j,k,-1],tally.error[i,j,k,-1]))
+        putfile.write('X Y Z TallyValue TallyError\n')
+        for i, voxel in enumerate(val):
+            if writezeros==True or val[i]!=0:
+                putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
+                                                         val[i], err[i]))
 
+
+def multixyzput(tallylist,ofile, writezeros=True):
+    """Write a meshtal point list in ofile with the data of a list of Meshtal 
+    tallylist. Autoconvert if any tally is cylindrical """
+#Preliminary check
+    with open(ofile+'.csv', "w") as putfile:
+        putfile.write('X Y Z TallyValue TallyError\n')
+        for tally in tallylist:
+            val = tally.value[:,:,:,-1].flatten()
+            err = tally.error[:,:,:,-1].flatten()
+            XYZ = tally._xyz()
+            for i, voxel in enumerate(val):
+                if writezeros==True or val[i]!=0:
+                    putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
+                                                             val[i], err[i]))
 
 def fput(tallylist,ofile):
     """Write a meshtal file ofile with the data of tallylist. ProbID and nps MUST match"""
