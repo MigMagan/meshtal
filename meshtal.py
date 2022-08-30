@@ -1,6 +1,6 @@
 """Mesh tally module."""
 
-from math import cos, sin, pi, sqrt, log, atan2
+from math import cos, sin, pi, sqrt, atan2
 import numpy as np
 # from pylab import *
 
@@ -160,10 +160,7 @@ class MeshTally:
         Result.comment+= " Normalized by density from {0}".format(ptrac_file)
         for i, j, k, e in np.ndindex(Result.iints, Result.jints, Result.kints, Result.eints+1):
             if Ro[i,j,k] != 0 :
-                if Ro[i,j,k] > 0:
-                    Result.value[i,j,k,e] = self.value[i,j,k,e]/Ro[i,j,k]
-                else:
-                    Result.value[i,j,k,e] = self.value[i,j,k,e]/Ro[i,j,k]*-1
+                Result.value[i,j,k,e] = self.value[i,j,k,e]/abs(Ro[i,j,k])
                 Result.error[i,j,k,e] = self.error[i,j,k,e]
             else:
                 Result.value[i,j,k,e] = 0
@@ -218,8 +215,7 @@ class MeshTally:
             value, error = self.value[i,j,k,-1], self.error[i,j,k,-1]
         if value == [] :
             return 'Sorry, value not found'
-        else:
-            return value, error
+        return value, error
 
 
     def _xyz(self):
@@ -359,13 +355,14 @@ def fgettally(tallystr):
         assert header[-3] == 'Result'
         assert header[-1] == 'Error'
 
-    for e in range(eints):
+    read_eints = eints+1 if eints>1 else 1
+    for e in range(read_eints):
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
             try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
                 tally.value[i, j, k, e+1] = line.split()[-2]
                 tally.error[i, j, k, e+1] = line.split()[-1]
-            except:
+            except(ValueError):
                 tally.value[i, j, k, e+1] = 0.0
                 tally.error[i, j, k, e+1] = 0.0
     # We now have the values for the energy bins, but we are missing the totals.
@@ -374,15 +371,6 @@ def fgettally(tallystr):
     if eints == 1:
         tally.value[:, :, :, 0] = tally.value[:, :, :, 1]
         tally.error[:, :, :, 0] = tally.error[:, :, :, 1]
-    else:
-        for (i, j, k) in np.ndindex(iints, jints, kints):
-            line = next(data)
-            try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
-                tally.value[i, j, k, e+1] = line.split()[-2]
-                tally.error[i, j, k, e+1] = line.split()[-1]
-            except:
-                tally.value[i, j, k, e+1] = 0.0
-                tally.error[i, j, k, e+1] = 0.0
     if Ttype == "Cyl":
         tally.geom = "Cyl"
         tally.origin = [float(l) for l in location[0:3]]
@@ -402,7 +390,7 @@ def fget(n, infile='meshtal'):
             if "Mesh Tally Number" in lines and str(n) == lines.split()[-1]:
                 print("Found tally", n)
                 tallystr1 = [lines]
-                tallystr2 = [lines for lines in MeshtalFile]
+                tallystr2 = list(MeshtalFile)
                 break
         else:
             print("Tally {0:d} not found".format(n))
@@ -430,7 +418,7 @@ def fgetall(infile='meshtal'):
         for lines in MeshtalFile:
             if "Mesh Tally Number" in lines:
                 tallystr1 = [lines]
-                tallystr2 = [lines for lines in MeshtalFile]
+                tallystr2 = list(MeshtalFile)
                 break
     alltallystr = tallystr1 + tallystr2
 
@@ -602,8 +590,7 @@ class HealthReport:
             index = np.nonzero(self.err[ebin] < minerror)
             minval = min([self.val[ebin][i] for i in index[0]])
             return minval
-        else:
-            return None  # No voxels with good enough error
+        return None  # No voxels with good enough error
 
 
     def fractionbelowE(self, minerror, ebin=0):
@@ -636,7 +623,7 @@ class HealthReport:
         print("Minimum relevant value is {0:E} \n".format(self.mingoodval(thresolds[1])))
         print("Tally nonzero elements are {0:.2%}\n".format(len(self.val[0])/self.nvox))
         for i, j in enumerate(thresolds):
-            ratio = self.fractionbelowE(thresolds[i])
+            ratio = self.fractionbelowE(j)
             if colour == False:
                 print("{0:.2%} voxels are below {1:.2F} error\n".format(ratio, j))
             else:
@@ -686,7 +673,7 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
         NFields = 2
     else:
         NFields = 2*meshtal.eints+2
-    vtk_name = ofile[:-4]   # TODO: Pardon me?
+    vtk_name = ofile.rstrip(".vtk")
     with open(ofile,"w") as VTKFile:
         VTKFile.write('# vtk DataFile Version 3.0\n'
                       '{ProbID} vtk output\n'
@@ -807,13 +794,12 @@ def merge(*meshtalarray):
             print('BIG FAT WARNING: Non-matching model ID found. Make sure you know what you\
                   are doing, if you do not, IT IS NOT MY PROBLEM!')
     result = copy(basetally, exclude=['value', 'error', 'nps'])
-    nps = sum([tally.nps  for tally in meshtalarray])
+    nps = sum(tally.nps  for tally in meshtalarray)
     result.nps = nps
 
     # Now the results and errors
     for (i, j, k, e) in np.ndindex(basetally.iints, basetally.jints, basetally.kints, basetally.eints):
         mergeval = 0
-        mergeerr = 0
         w = []
         for tally in meshtalarray:
             mergeval = tally.value[i,j,k,e]*tally.nps+mergeval
@@ -886,9 +872,9 @@ def xyzput(tally,ofile, writezeros=True):
     with open(ofile+'.csv', "w") as putfile:
         putfile.write('X Y Z TallyValue TallyError\n')
         for i, voxel in enumerate(val):
-            if writezeros==True or val[i]!=0:
+            if writezeros==True or voxel!=0:
                 putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
-                                                         val[i], err[i]))
+                                                         voxel, err[i]))
 
 
 def multixyzput(tallylist,ofile, writezeros=True):
@@ -902,9 +888,9 @@ def multixyzput(tallylist,ofile, writezeros=True):
             err = tally.error[:,:,:,-1].flatten()
             XYZ = tally._xyz()
             for i, voxel in enumerate(val):
-                if writezeros==True or val[i]!=0:
+                if writezeros==True or voxel!=0:
                     putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
-                                                             val[i], err[i]))
+                                                             voxel, err[i]))
 
 def fput(tallylist,ofile):
     """Write a meshtal file ofile with the data of tallylist. ProbID and nps MUST match"""
@@ -919,7 +905,7 @@ def fput(tallylist,ofile):
 
 def wwrite_auto(ofile='wwout_auto',*tallies):
     wwrite(ofile,None,None,0,*tallies)
-    return
+
 
 # def wwrite(*tallies,ofile='wwout',scale=None,wmin=None):
 def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
@@ -985,7 +971,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     coarseimesh = [tally.ibins[0]]
     coarsejmesh = [tally.jbins[0]]
     coarsekmesh = [tally.kbins[0]]
-    npart = max([IPT[tally.part] for tally in tallies])
+    npart = max(IPT[tally.part] for tally in tallies)
     print(npart)
 
     bins = [tally.ibins, tally.jbins, tally.kbins]
@@ -1051,7 +1037,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
         for [mesh, coarse, fine] in zip(bins, coarses, fines):
             mesharray = [mesh[0]]
             for i, v in enumerate(fine):
-                mesharray.append(fine[i])
+                mesharray.append(v)
                 mesharray.append(coarse[i+1])
                 mesharray.append(1)
 
@@ -1123,13 +1109,13 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
 def conv_Cilind(Axs, Vec, origin, XYZ):
     if len(XYZ) != 3:
         print("input coordinate not a Triad")
-        return
+        return None
     if len(Vec) != 3:
         print("Vector coordinate not a Triad")
-        return
+        return None
     if len(Axs) != 3:
         print("Axis coordinate not a Triad")
-        return
+        return None
     # Transform to arrays
     Axs = np.array(Axs)
     Vec = np.array(Vec)
@@ -1145,10 +1131,12 @@ def conv_Cilind(Axs, Vec, origin, XYZ):
     R = sqrt(R2)
 
     Radial = XYZ - Axs*Z
-    X = np.dot(Radial, Vec)
     YVec = np.cross(Axs, Vec)
+    X = np.dot(Radial, Vec)
     Y = np.dot(Radial, YVec)
     Theta = atan2(Y, X) % (2*pi)
+    if Theta<0:
+        Theta=Theta+1
     Theta = Theta/(2*pi)  # Because Numpy gives the results in radian and we want revolutions.
     return(R, Z, Theta)
 
@@ -1160,16 +1148,15 @@ def conv_Cilindricas_multi(Axs,Vec,origin,XYZ):   #TODO: Should use the above fu
     if len(Axs)!=3:
         print("Axis coordinate not a Triad")
         return
-    Axs2 = np.dot(Axs,Axs)
-    Vec2 = np.dot(Vec,Vec)
+    Axs = np.array(Axs)
+    Vec = np.array(Vec)
     YVec = np.cross(Axs,Vec)
     Transformed = []
-    XYZ = XYZ-origin
+    XYZ = np.array(XYZ)-origin
     print("Transforming geometry")
-    for i in range(3):
-        Axs[i]=Axs[i]/Axs2
-        Vec[i]=Vec[i]/Vec2  # Normalize the Axs and Vec vector, just in case!!
-        j = 0
+    Axs = Axs/np.linalg.norm(Axs)
+    Vec = Vec/np.linalg.norm(Vec)  # Normalize the Axs and Vec vector, just in case!!
+    j = 0
     for point in XYZ:
         L = np.linalg.norm(point)
         Z = np.dot(point,Axs)
@@ -1213,8 +1200,8 @@ def add(*tallies):
     Result = copy (RefTal, exclude=['probID', 'comment', 'value', 'error'])
     Result.probID = "Generated by meshtal class from {probID}".format(probID=RefTal.probID)
     Result.comment = "Tallies added: {valor}".format(valor=[tally.n for tally in tallies])
-    Result.value = sum([tally.value for tally in tallies])
-    totnps = sum([tally.nps for tally in tallies])
+    Result.value = sum(tally.value for tally in tallies)
+    totnps = sum(tally.nps for tally in tallies)
     for (i, j, k, e) in np.ndindex(Result.iints, Result. jints, Result.kints, Result.eints):
         w = []
         for tally in tallies:
@@ -1267,13 +1254,13 @@ def smooth(Tally, maxfactor, ebin=0):  # TODO: This should be a class method, no
                     print ("To:", Tally.value[i, j, k, ebin])
 
 
-def ww_get(infile='wwinp'):  
+def ww_get(infile='wwinp'):
 #BLOCK 1
     with open (infile,"r") as ww_file:
-        header = ww_file.readline() 
+        header = ww_file.readline()
         if len(header)>4:
             wwprobID = header.split()[4:] # got problem ID
-        else:   
+        else:
             wwprobID = "no ID provided"
         wwnpart = int(header.split()[2])  # particle number
         wwgeom = header.split()[3]  # define geometry
@@ -1412,9 +1399,6 @@ def SEAM(*meshtalarray):
                     print(i, j, k, e)
                     errors = [tally.error[i, j, k, e] for tally in meshtalarray]
                     values = [tally.value[i, j, k, e] for tally in meshtalarray]
-                    mergeval = 0
-                    mergeerr = 0  # TODO: This does NOT seem well thought, review algo
-                    totalweight = 0
                     w=[]
                     if sum(values)==0:
                         result.value[i, j, k, e] = 0
