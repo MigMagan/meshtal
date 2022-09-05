@@ -62,6 +62,7 @@ class MeshTally:
             self.vec = np.array([1, 0, 0])   # Azimuthal vector
 
     def shape(self):
+        "return the spatial+energy shape of the tally"
         return self.iints, self.jints, self.kints, self.eints
 
     @property
@@ -109,7 +110,7 @@ class MeshTally:
                 self.vec = newvec/np.linalg.norm(newvec)
         if logfile is not None:
             print('adding ', anglemod, ' degrees to default cylinder kbins')
-            log_results_file = open(logfile, 'a')
+            log_results_file = open(logfile, 'a', encoding="utf-8")
             log_results_file.write(f'\nMesh number {self.n} \n')
             log_results_file.write(f'Have we modified tmesh orientation? {select} \n')
             log_results_file.write(f'New origin vector instead 0 0 0: {self.origin} \n')
@@ -195,15 +196,11 @@ class MeshTally:
             print(f'CYL coordinates: {XYZ[0]:.2f} {XYZ[1]:.2f} {XYZ[2]:.2f} ')
         if len(XYZ) != 3:
             print("input coordinate not a Triad")
-            return
-        if not self.ibins[0] <= XYZ[0] < self.ibins[-1]:
-            print('X value out of the mesh limits')
-            return
-        if not self.jbins[0] <= XYZ[1] < self.jbins[-1]:
-            print('Y value out of the mesh limits')
-            return
-        if not self.kbins[0] <= XYZ[2] < self.kbins[-1]:
-            print('Z value out of the mesh limits')
+            return None, None
+        limits = zip([self.ibins, self.jbins, self.kbins], XYZ)
+        for bins, coord in limits:
+            if not bins[0] <= coord[0] < bins[-1]:
+                print('X value out of the mesh limits')
             return
         value=[]
         i = np.searchsorted(self.ibins, XYZ[0])-1
@@ -246,7 +243,7 @@ class MeshTally:
 def flist(infile='meshtal'):
     """ Get the tally numbers for all mesh tallies present in infile """
 
-    with open(infile, "r") as MeshtalFile:
+    with open(infile, "r", encoding="utf-8") as MeshtalFile:
         tallylist = []
         for line in MeshtalFile:
             if "Mesh Tally Number" in line:
@@ -257,7 +254,7 @@ def flist(infile='meshtal'):
 
 def fgetheader(infile='meshtal'):
     """ Auxiliary method to get probID, modID and nps from a meshtal file """
-    with open(infile, "r") as MeshtalFile:
+    with open(infile, "r", encoding="utf-8") as MeshtalFile:
         header = MeshtalFile.readline().rstrip('\n')
         probID = header.split("probid =")[1]  # got problem ID
         modID = MeshtalFile.readline().rstrip("\n")  # Description of the model
@@ -362,7 +359,7 @@ def fgettally(tallystr):
             try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
                 tally.value[i, j, k, e+1] = line.split()[-2]
                 tally.error[i, j, k, e+1] = line.split()[-1]
-            except(ValueError):
+            except ValueError:
                 tally.value[i, j, k, e+1] = 0.0
                 tally.error[i, j, k, e+1] = 0.0
     # We now have the values for the energy bins, but we are missing the totals.
@@ -385,7 +382,7 @@ def fgettally(tallystr):
 def fget(n, infile='meshtal'):
     """ Get tally number n from meshtal file. """
     header = fgetheader(infile)
-    with open(infile, "r") as MeshtalFile:
+    with open(infile, "r", encoding="utf-8") as MeshtalFile:
         for lines in MeshtalFile:
             if "Mesh Tally Number" in lines and str(n) == lines.split()[-1]:
                 print("Found tally", n)
@@ -414,7 +411,7 @@ def fgetall(infile='meshtal'):
     print('Found tallies:')
     print(*nlist, sep=', ')
     header = fgetheader(infile)
-    with open(infile, "r") as MeshtalFile:
+    with open(infile, "r", encoding="utf-8") as MeshtalFile:
         for lines in MeshtalFile:
             if "Mesh Tally Number" in lines:
                 tallystr1 = [lines]
@@ -443,14 +440,14 @@ def fgetall(infile='meshtal'):
 def tgetall(tfile):
     """ Get all the mesh tallies from the gridconv file tfile"""
     try:
-        tmesh = open(tfile, "r")
+        tmesh = open(tfile, "r", encoding="utf-8")
     except OSError:
         print('cannot open file', tfile)
         return
     else:
         tmesh.close()
 
-    with open(tfile, "r") as meshtalfile:
+    with open(tfile, "r", encoding="utf-8") as meshtalfile:
         comment = meshtalfile.readline()
         lines = meshtalfile.readline()
         valores = lines.split()
@@ -499,8 +496,7 @@ def tgetall(tfile):
             iints = tallylist[tally].iints
             jints = tallylist[tally].jints
             kints = tallylist[tally].kints
-            value = np.zeros((iints, jints, kints))
-            error = np.zeros((iints, jints, kints))
+            value, error = np.zeros((iints, jints, kints))
 
 # Added by OGM to re-orient TMESH. Hackish but working?
             if tallylist[tally].geom=="Cyl":
@@ -588,7 +584,7 @@ class HealthReport:
             return None
         if min(self.err[ebin]) < minerror:
             index = np.nonzero(self.err[ebin] < minerror)
-            minval = min([self.val[ebin][i] for i in index[0]])
+            minval = min(self.val[ebin][i] for i in index[0])
             return minval
         return None  # No voxels with good enough error
 
@@ -604,7 +600,7 @@ class HealthReport:
         return num/self.nvox
 
 
-    def report(self, ebins=[0], thresolds=[0.1, 0.2]):
+    def report(self, thresolds=(0.1, 0.2)):
         """
         Print general mesh tally health information. Done by default on total energy, but more
         bins can be added as ebins
@@ -624,7 +620,7 @@ class HealthReport:
         print(f"Tally nonzero elements are {len(self.val[0])/self.nvox:.2%}\n")
         for i, j in enumerate(thresolds):
             ratio = self.fractionbelowE(j)
-            if colour == False:
+            if not colour:
                 print(f"{ratio:.2%} voxels are below {j:.2F} error\n")
             else:
                 if ratio<0.8:
@@ -658,11 +654,9 @@ def Geoeq(*tallies):
             print("Argument #{0} is not a meshtally object".format(index))
             return False
     for tally in tallies[1:]:
-        if not np.array_equal(tally.ibins, tallies[0].ibins):
-            return False
-        if not np.array_equal(tally.jbins, tallies[0].jbins):
-            return False
-        if not np.array_equal(tally.kbins, tallies[0].kbins):
+        if (not np.array_equal(tally.ibins, tallies[0].ibins)
+        or not np.array_equal(tally.jbins, tallies[0].jbins)
+        or not np.array_equal(tally.kbins, tallies[0].kbins)):
             return False
     return True
 
@@ -674,13 +668,13 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
     else:
         NFields = 2*meshtal.eints+2
     vtk_name = ofile.rstrip(".vtk")
-    with open(ofile,"w") as VTKFile:
+    with open(ofile,"w", encoding="utf-8") as VTKFile:
         VTKFile.write(f'# vtk DataFile Version 3.0\n'
                       f'{meshtal.probID} vtk output\n'
                       f'ASCII\n')
     if meshtal.geom == "XYZ":
         nvoxels = meshtal.iints * meshtal.jints * meshtal.kints  # Total number of voxels
-        with open(ofile,"a") as VTKFile:
+        with open(ofile,"a", encoding="utf-8") as VTKFile:
             VTKFile.write('DATASET RECTILINEAR_GRID\n')
             VTKFile.write(f'DIMENSIONS {meshtal.iints+1} {meshtal.jints+1} '+
                           f'{meshtal.kints+1}\n')
@@ -721,7 +715,7 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
                 for k, kbin in enumerate(kbins):
                     points[i+1, j, k] = ibin*(cos(kbin*2*pi)*VEC+sin(kbin*2*pi)*YVEC) + jbin*AXS + origin
 
-        with open(ofile, "a") as VTKFile:
+        with open(ofile, "a", encoding="utf-8") as VTKFile:
             VTKFile.write('DATASET STRUCTURED_GRID\n')
             VTKFile.write('DIMENSIONS {Z} {Y} {X}\n'.format(X=meshtal.iints+1, Y=meshtal.jints+1,
                                                             Z=kints+1))
@@ -732,7 +726,7 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
         print("I do not know this mesh tally geometry. Quitting, sorry.")
         return
 
-    with open(ofile, "a") as VTKFile:
+    with open(ofile, "a", encoding="utf-8") as VTKFile:
         VTKFile.write('CELL_DATA {N}\n'.format(N=nvoxels))
         VTKFile.write('FIELD FieldData {N} \n'.format(N=NFields))
         VTKFile.write('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
@@ -840,21 +834,21 @@ def voxelmerge(meshtal, voxelmap):
     jj = voxelmap[1].astype(int)
     kk = voxelmap[2].astype(int)
     n = (ii[1]-ii[0]) * (jj[1]-jj[0]) * (kk[1]-kk[0])
-    Result = meshtal.value[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
-    Error = meshtal.error[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
-    Volume = meshtal.volume[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
+    result = meshtal.value[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
+    error = meshtal.error[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
+    volume = meshtal.volume[ii[0]:ii[1], jj[0]:jj[1], kk[0]:kk[1], :]
     Integral = np.zeros((ii[1]-ii[0], jj[1]-jj[0], kk[1]-kk[0], meshtal.eints+1))
     for e in range(meshtal.eints+1):
-        Integral[:, :, :, e] = Result[:, :, :, e] * Volume
-    Ave = np.zeros(meshtal.eints+1)
+        Integral[:, :, :, e] = result[:, :, :, e] * volume
+    ave = np.zeros(meshtal.eints+1)
     for e in range(meshtal.eints+1):
-        Ave[e] = Integral[:, :, :, e].sum()/Volume.sum()
+        ave[e] = Integral[:, :, :, e].sum()/volume.sum()
     w = np.zeros((ii[1]-ii[0], jj[1]-jj[0], kk[1]-kk[0], meshtal.eints+1))
     for e in range(meshtal.eints+1):
-        w[:, :, :, e] = (Error[:, :, :, e]**2+1)*(Ave[e]**2) # We use the meshtal_merge formula with constant NPS
+        w[:, :, :, e] = (error[:, :, :, e]**2+1)*(ave[e]**2) # We use the meshtal_merge formula with constant NPS
     print(n)
-    Err = [sqrt((w[:, :, :, e].sum()/n-Ave[e]**2) / (n*Ave[e]**2)) for e in range(meshtal.eints+1)]
-    return  {'value':Ave, 'error':Err}
+    Err = [sqrt((w[:, :, :, e].sum()/n-ave[e]**2) / (n*ave[e]**2)) for e in range(meshtal.eints+1)]
+    return  {'value':ave, 'error':Err}
 
 
 def xyzput(tally,ofile, writezeros=True):
@@ -862,14 +856,14 @@ def xyzput(tally,ofile, writezeros=True):
     Autoconvert if tally is cylindrical. Setting writezeros to False skips all
     lines with value=0"""
 #Preliminary check
-    if type(tally)!=MeshTally:
+    if not isinstance(tally, MeshTally):
         print("Argument #0 is not a meshtally object")
     if tally.eints > 1:
         print("WARNING: Multiple energy tally. Dumping only total energy")
     val = tally.value[:,:,:,-1].flatten()
     err = tally.error[:,:,:,-1].flatten()
     XYZ = tally._xyz()
-    with open(ofile+'.csv', "w") as putfile:
+    with open(ofile+'.csv', "w", encoding="utf-8") as putfile:
         putfile.write('X Y Z TallyValue TallyError\n')
         for i, voxel in enumerate(val):
             if writezeros==True or voxel!=0:
@@ -878,10 +872,10 @@ def xyzput(tally,ofile, writezeros=True):
 
 
 def multixyzput(tallylist,ofile, writezeros=True):
-    """Write a meshtal point list in ofile with the data of a list of Meshtal 
+    """Write a meshtal point list in ofile with the data of a list of Meshtal
     tallylist. Autoconvert if any tally is cylindrical """
 #Preliminary check
-    with open(ofile+'.csv', "w") as putfile:
+    with open(ofile+'.csv', "w", encoding="utf-8") as putfile:
         putfile.write('X Y Z TallyValue TallyError\n')
         for tally in tallylist:
             val = tally.value[:,:,:,-1].flatten()
@@ -903,12 +897,8 @@ def fput(tallylist,ofile):
                         pass
 
 
-def wwrite_auto(ofile='wwout_auto',*tallies):
-    wwrite(ofile,None,None,0,*tallies)
-
-
 # def wwrite(*tallies,ofile='wwout',scale=None,wmin=None):
-def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
+def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
     # Bonus TODO: Implement wmin value for anything above an uncertainty.
     """ Write a MAGIC-like weight window file from tallies to ofile,
         using wmin minimal weight and scale agressivity.
@@ -930,7 +920,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     # Check
     print([tal.part for tal in tallies])
 
-    if scale == None:  #
+    if scale is None:  #
         scale = np.zeros(len(tallies))
         for i, tally in enumerate(tallies):
             h = HealthReport(tally)
@@ -943,7 +933,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     if not hasattr(scale,'len'):
         scale=np.ones(len(tallies))*scale
 
-    if  wmin == None:
+    if  wmin is None:
         wmin = np.zeros(len(tallies))
         for i, tally in enumerate(tallies):
             maxval = tally.value.max()
@@ -995,7 +985,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
     print('coarsejmesh', coarsejmesh)
     print('coarsekmesh', coarsekmesh)
 
-    with open(ofile,"w") as wwfile:
+    with open(ofile,"w", encoding="utf-8") as wwfile:
 
 #BLOCK 1
         if tally.geom=="XYZ":
@@ -1088,7 +1078,7 @@ def wwrite(ofile='wwout', scale=None, wmin=None, *tallies, **kwargs):
                 cont = np.count_nonzero(tally.value_ww[:, :, :, e] == WW_topcap)
                 print(cont,' values modified by an upper cap for energy bin', e)
 
-        with open(ofile, "a") as wwfile:
+        with open(ofile, "a", encoding="utf-8") as wwfile:
             #print
             for e in range(tally.eints):
                 wwfile.write('{0:13.5E} '.format(tally.ebins[e+1]))
@@ -1171,10 +1161,10 @@ def conv_Cilindricas_multi(Axs,Vec,origin,XYZ):   #TODO: Should use the above fu
             Theta=Theta+1
         Transformed.append([R,Z,Theta])
         j = j+1
-        if ((j+1)% 1e5==0):
+        if (j+1)% 1e5==0:
             print (j+1,' transformed points')
    #         print (Transformed[:-1])
-    return(Transformed)
+    return Transformed
 
 
 def add(*tallies):
@@ -1221,9 +1211,9 @@ def smooth(Tally, maxfactor, ebin=0):  # TODO: This should be a class method, no
 #   Object check
     if not hasattr(Tally, 'value'):
         print("Uh, uh, First argument does not seem like a meshtal object. Quitting.")
-        return None
-    import itertools 
-    neighbours = np.full((Tally.iints, Tally.jints, Tally.kints), 1) 
+        return
+    import itertools
+    neighbours = np.full((Tally.iints, Tally.jints, Tally.kints), 1)
     for i in range(Tally.iints):
         ineighbours = [i]
         if i!=0:
@@ -1256,7 +1246,7 @@ def smooth(Tally, maxfactor, ebin=0):  # TODO: This should be a class method, no
 
 def ww_get(infile='wwinp'):
 #BLOCK 1
-    with open (infile,"r") as ww_file:
+    with open (infile,"r", encoding="utf-8") as ww_file:
         header = ww_file.readline()
         if len(header)>4:
             wwprobID = header.split()[4:] # got problem ID
@@ -1327,7 +1317,7 @@ def ww_get(infile='wwinp'):
         for p in range(wwnpart):
             nwwma = iints*jints*kints
             ww_value = np.zeros((nwwma,eints[p]))
-            ebins = np.zeros(1) 
+            ebins = np.zeros(1)
             while True:
                 line = ww_file.readline()  # energy bin
                 print(line)
@@ -1341,7 +1331,7 @@ def ww_get(infile='wwinp'):
                     line=ww_file.readline()
                     for j in range(0,6):
                         ww_value[i+j, e] = float(line.split()[j])
-                           
+
             if wwgeom == "10":
                 for e in range(eints[p]):
                     l=0
@@ -1361,22 +1351,22 @@ def ww_get(infile='wwinp'):
 #      print('cylindrical wwinp, not developed... sorry')
 #      return
 #      
-#   
+#
 #   print(tally.geom,tally.iints,tally.jints,tally.kints,tally.eints)
 ##   print(tally.ibins, tally.jbins, tally.kbins,tally.ebins) 
 #   
 #   mt.vtkwrite(tally,infile+'.vtk')
-#   
+#
 ##   print(coarseimesh,coarsejmesh,coarsekmesh,nwg)
     return tallylist
 
 
 def SEAM(*meshtalarray):
     """Smart Error Aware Merger. Merges mesh tallies in meshtalarray giving different weight 
-    to the results according to their statistical error. For instance, if one of the tallies has 
-    very good statistic in one voxel (say below 0.05), and the other tallies are poor (over 0.5), 
+    to the results according to their statistical error. For instance, if one of the tallies has
+    very good statistic in one voxel (say below 0.05), and the other tallies are poor (over 0.5),
     the result will be the one from the first tally. Exact methodology to be discussed and set.
-    Highly experimental. May provide wrong results, eat your ice cream or set your house on fire.
+    Highly experimental. May provide wrong results, eat your ice cream or set your house on fire
     Use at your own risk.
     """
     basetally=meshtalarray[0] # More or less as the MCNP tool. 
