@@ -227,7 +227,7 @@ class MeshTally:
                 for j in range(self.jints):
                     Z = (self.jbins[j]+self.jbins[j+1])/2
                     for k in range(self.kints):
-                        Theta = (self.kbins[k]+self.kbins[k+1])/2*360 # in degrees better for CFD guys
+                        Theta = (self.kbins[k]+self.kbins[k+1])/2 # in degrees better for CFD guys
                         XYZ.append(R*(XVEC*cos(2*pi*Theta)+YVEC*sin(2*pi*Theta))+Z*AXS+self.origin)
         else:
             for i in range(self.iints):
