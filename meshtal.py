@@ -61,7 +61,6 @@ class MeshTally:
             self.axis = np.array([0, 0, 1])  # Axis
             self.vec = np.array([1, 0, 0])   # Azimuthal vector
 
-    @property
     def shape(self):
         "return the spatial+energy shape of the tally"
         return self.iints, self.jints, self.kints, self.eints
@@ -228,11 +227,7 @@ class MeshTally:
                 for j in range(self.jints):
                     Z = (self.jbins[j]+self.jbins[j+1])/2
                     for k in range(self.kints):
-<<<<<<< HEAD
-                        Theta = (self.kbins[k]+self.kbins[k+1])/2 # in degrees better for CFD guys
-=======
                         Theta = (self.kbins[k]+self.kbins[k+1])/2
->>>>>>> 5333baf (minor bug)
                         XYZ.append(R*(XVEC*cos(2*pi*Theta)+YVEC*sin(2*pi*Theta))+Z*AXS+self.origin)
         else:
             for i in range(self.iints):
@@ -501,7 +496,8 @@ def tgetall(tfile):
             iints = tallylist[tally].iints
             jints = tallylist[tally].jints
             kints = tallylist[tally].kints
-            value, error = np.zeros((iints, jints, kints))
+            value = np.zeros((iints, jints, kints))
+            error = np.zeros((iints, jints, kints))
 
 # Added by OGM to re-orient TMESH. Hackish but working?
             if tallylist[tally].geom=="Cyl":
