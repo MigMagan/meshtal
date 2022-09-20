@@ -679,11 +679,11 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
             VTKFile.write('DATASET RECTILINEAR_GRID\n')
             VTKFile.write(f'DIMENSIONS {meshtal.iints+1} {meshtal.jints+1} '+
                           f'{meshtal.kints+1}\n')
-            VTKFile.write(f'X_COORDINATES {meshtal.iints+1}\n')
+            VTKFile.write(f'X_COORDINATES {meshtal.iints+1} float\n')
             VTKFile.writelines([f"{i}\n" for i in meshtal.ibins])
-            VTKFile.write(f'Y_COORDINATES {meshtal.jints+1}\n')
+            VTKFile.write(f'Y_COORDINATES {meshtal.jints+1} float\n')
             VTKFile.writelines([f"{i}\n" for i in meshtal.jbins])
-            VTKFile.write(f'Z_COORDINATES {meshtal.kints+1}\n')
+            VTKFile.write(f'Z_COORDINATES {meshtal.kints+1} float\n')
             VTKFile.writelines([f"{i}\n" for i in meshtal.kbins])
             value = [meshtal.value[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
             error = [meshtal.error[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
