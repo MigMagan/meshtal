@@ -668,6 +668,8 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
         NFields = 2
     else:
         NFields = 2*meshtal.eints+2
+    if  not ofile[:-4] == '.vtk':
+        ofile = ofile + '.vtk'
     vtk_name = ofile.rstrip(".vtk")
     with open(ofile,"w", encoding="utf-8") as VTKFile:
         VTKFile.write(f'# vtk DataFile Version 3.0\n'
