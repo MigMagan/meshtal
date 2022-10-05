@@ -437,7 +437,7 @@ def fgetall(infile='meshtal'):
     return tallylist
 
 
-def tgetall(tfile):
+def tgetall(tfile, rotate=True):
     """ Get all the mesh tallies from the gridconv file tfile"""
     try:
         tmesh = open(tfile, "r", encoding="utf-8")
@@ -500,7 +500,7 @@ def tgetall(tfile):
             error = np.zeros((iints, jints, kints))
 
 # Added by OGM to re-orient TMESH. Hackish but working?
-            if tallylist[tally].geom=="Cyl":
+            if tallylist[tally].geom=="Cyl" and rotate == True:
                 tallylist[tally].userrotate(logfile='log_tgetall.txt')
 
             lines = meshtalfile.readline()
