@@ -5,7 +5,7 @@
 """
 import numpy as np
 from tqdm import tqdm
-from pyne import mcnp
+# from pyne import mcnp
 import sparse
 import meshtal as mt
 import cell
@@ -91,9 +91,8 @@ def readnextev(f):
     x, y, z = tokens[0:3]
     return {"next": nextev, "x":x, "y":y, "z":z, "ncl":ncl }
 
-
-def get_ptrac_src(ptrac_file, pformat="ASCII"):
-    """ Return an array of Nx3 with the X, Y, Z coordinates and cell of all src events
+def __get_ptrac(ptrac_file,pformat,target_ID):
+    """ Return an array of Nx3 with the X, Y, Z coordinates and cell of desired event
     in a ptrac_file. Use pformat="BIN" to read a binary PTRAC """
     if pformat.capitalize() == "Ascii":
         f = open(ptrac_file, 'r', encoding="UTF-8")
@@ -110,7 +109,7 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
             tokens = line.split()
             Event_ID = int(tokens[1])
             event = readnextev(f)
-            if Event_ID == 1000:
+            if Event_ID == target_ID:
                 ptrac_completo[j] = [event["x"], event["y"], event["z"], event["ncl"]]
             while event["next"] != 9000:
                 event = readnextev(f)
@@ -124,7 +123,7 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
         while True:
             try:
                 p.read_nps_line()
-                if p.next_event == 1000:
+                if p.next_event == target_ID:
                     npart+=1
             except EOFError:
                 break  # no more entries
@@ -142,11 +141,29 @@ def get_ptrac_src(ptrac_file, pformat="ASCII"):
                 break  # no more entries
             while p.next_event != 9000:
                 p.read_event_line(event)
-                if event["event_type"] == 1000:
+                if event["event_type"] == target_ID:
                     ptrac_completo[i] = [event['xxx'], event['yyy'], event['zzz'], event['ncl']]
                     i+=1
-        return ptrac_completo[:i]
+        return ptrac_completo[:i]    
 
+
+def get_ptrac_src(ptrac_file, pformat="ASCII"):
+    """ Return an array of Nx3 with the X, Y, Z coordinates and cell of all source events
+    in a ptrac_file. Use pformat="BIN" to read a binary PTRAC """
+    ptrac_completo = __get_ptrac(ptrac_file,pformat,1000)
+    return ptrac_completo
+
+def get_ptrac_sur(ptrac_file, pformat="ASCII"):
+    """ Return an array of Nx3 with the X, Y, Z coordinates and cell of all surface passing events
+    in a ptrac_file. Use pformat="BIN" to read a binary PTRAC """
+    ptrac_completo = __get_ptrac(ptrac_file,pformat,3000)
+    return ptrac_completo
+
+def get_ptrac_ter(ptrac_file, pformat="ASCII"):
+    """ Return an array of Nx3 with the X, Y, Z coordinates and cell of all termination events
+    in a ptrac_file. Use pformat="BIN" to read a binary PTRAC """
+    ptrac_completo = __get_ptrac(ptrac_file,pformat,5000)
+    return ptrac_completo
 
 def _remove_below_frac(s, min_frac):
     """ Remove all data for a sparse matrix s that is below min_frac"""
