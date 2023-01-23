@@ -77,54 +77,33 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
         return None, None
     line = p2 - p1
     uvw = (line)/np.linalg.norm(line)
-    ibins = mesh.ibins
-    jbins = mesh.jbins
-    kbins = mesh.kbins
-    direction = [int(np.sign(u)) for u in uvw]
-
-#   Calculate starting position
-    if p1[0] in ibins or p1[1] in jbins or p1[2] in kbins: # Move this 1um
-        p1 = p1 + 1e-4*uvw
-    i0 = np.searchsorted(ibins, p1[0]) - 1
-    j0 = np.searchsorted(jbins, p1[1]) - 1
-    k0 = np.searchsorted(kbins, p1[2]) - 1
-#   Calculate ending position
-    # i1 = np.searchsorted(ibins, p2[0]) - 1
-    # j1 = np.searchsorted(jbins, p2[1]) - 1
-    # k1 = np.searchsorted(kbins, p2[2]) - 1
-#    Calculate the collision planes
-    # col_planes1 = []
+    # ints = [mesh.iints, mesh.jints, mesh.kints]
+    bins = [mesh.ibins, mesh.jbins, mesh.kbins]
+    sides = ["left" if u<0 else "right" for u in uvw]
+    direction = [int(i) for i in np.sign(uvw)]
+    ijk0 = [np.searchsorted(bins[i], p1[i], side=sides[i])- 1 for i in range(3)]
     col_dists1 = []
-    # col_planes2 = []
     col_dists2 = []
-    # col_planes3 = []
     col_dists3 = []
-    if uvw[0] != 0:
-        # col_planes1 = [[x, None, None]  for x in ibins if is_between(p2[0], p1[0], x)]
-        col_dists1 = [(x-p1[0])/uvw[0] for x in ibins if is_between(p2[0], p1[0],x)]
-    if uvw[1] != 0:
-        # col_planes2 = [[None, y, None]  for y in jbins if is_between(p2[1], p1[1], y)]
-        # col_dists2 = [(y[1]-p1[1])/uvw[1] for y in col_planes2]
-        col_dists2 = [(y-p1[1])/uvw[1] for y in jbins if is_between(p2[1], p1[1],y)]
-    if uvw[2] != 0:
-        # col_planes3 = [[None, None, z]  for z in kbins if is_between(p2[2], p1[2], z)]
-        # col_dists3 = [(z[2]-p1[2])/uvw[2] for z in col_planes3]
-        col_dists3 = [(z-p1[2])/uvw[2] for z in kbins if is_between(p2[2], p1[2],z)]
+    for i in range(3):
+        if uvw[i] !=0:
+            col_dists[i] = np.array([(x-p1[i]) for x in bins[i] if is_between(p2[i], p1[i], i)]) 
+            col_dists[i]/=uvw[i]
     # cplanes = col_planes1 + col_planes2 + col_planes3
-    cdists = np.array(col_dists1 + col_dists2 + col_dists3 + [np.linalg.norm(line)])
+    cdists = np.concatenate((col_dists[0], col_dists[1], col_dists[2], [np.linalg.norm(line)]))
+    # print(cdists)
     index_dist = np.argsort(cdists)
-
-# Build direction matrix. Not very elegant TBH
-    cdir = np.zeros((index_dist.size, 3), dtype=int)
-    ni = len(col_dists1)
-    nj = len(col_dists2)
-    nk = len(col_dists3)
+# # Build direction matrix. Not very elegant TBH
+    cdir = np.zeros((index_dist.size, 3), dtype="int8")
+    ni = len(col_dists[0])
+    nj = len(col_dists[1])
+    nk = len(col_dists[2])
     cdir[0:ni] = [direction[0], 0, 0]
     cdir[ni:ni+nj] = [0, direction[1], 0]
     cdir[ni+nj:ni+nj+nk] = [0, 0, direction[2]]
-# Build cell matrix
-    cells = np.zeros((index_dist.size, 3), dtype=int)
-    cells[0] = [i0, j0, k0]
+# # Build cell matrix
+    cells = np.zeros((index_dist.size, 3))
+    cells[0] = ijk0
     for i, index in enumerate(index_dist[:-1]):
         cells[i+1] = cells[i] + cdir[index]
     cdists.sort()
@@ -143,11 +122,8 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
                 if cell[2] in range(mesh.kints):
                     last = index_dist.size-i
                     break
-    # print(cells)
-    # print(cdir)
     cdists = np.diff(cdists, prepend=0)[first:last]
     cells = cells[first:last]
-    # print(cells)
     index = np.zeros((4, cells.shape[0]), dtype="int32")
     index[0:3] = np.transpose(cells)
     index[3,:] = ncell
