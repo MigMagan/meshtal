@@ -73,12 +73,15 @@ def __cyl_raytracer(p1, p2, mesh, ncell=0):
 
 def __xyz_raytracer(p1, p2, mesh, ncell=0):
     "take a ray from array p1 to array p2, and add the contribution to a cartesian mesh"
+    if (p1==p2).all():
+        return None, None
     line = p2 - p1
     uvw = (line)/np.linalg.norm(line)
     ibins = mesh.ibins
     jbins = mesh.jbins
     kbins = mesh.kbins
-    direction = [np.sign(u) for u in uvw]
+    direction = [int(np.sign(u)) for u in uvw]
+
 #   Calculate starting position
     if p1[0] in ibins or p1[1] in jbins or p1[2] in kbins: # Move this 1um
         p1 = p1 + 1e-4*uvw
@@ -153,7 +156,8 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
 def raytracer(p1, p2, mesh, ncell=0):
     if not isinstance(p1, np.ndarray) or not isinstance(p2, np.ndarray):
         raise TypeError("only numpy arrays con be used as points")
-    if any(np.size(p1), np.size(p2)) != 3:
+    if any([np.size(p1) !=3, np.size(p2) !=3]):
+        print("trying to trace points {0} and {1}".format(p1, p2))
         raise IndexError("points don't have 3 dimensions")
     if mesh.geom=="XYZ":
         return __xyz_raytracer(p1, p2, mesh, ncell)
@@ -212,7 +216,7 @@ def postprocess_rays(init_points, final_points, cells, inf_distance=1000):
     r2 = []
     print("postprocessing ray list")
     for i, point in tqdm.tqdm(enumerate(final_points), unit ="rays", position=0, unit_scale=True):
-        if (point is None).all():
+        if not point.all():
             if (final_points[i-1] == init_points[i]).all():  # tracable ray
                 direction = final_points[i-1] - init_points[i-1]
                 r0.append(init_points[i])
