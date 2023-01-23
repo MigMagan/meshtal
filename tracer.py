@@ -2,15 +2,16 @@
 " A test for our ptrac ray tracer"
 __author__       =  "Miguel Magan"
 
-import numpy as np
-import sparse
-from pyne import mcnp
 from multiprocessing import Pool
 import tqdm
 from tqdm.contrib import tzip
 from math import atan2, pi
+from pyne import mcnp
+import numpy as np
+import sparse
 
-class Meshtal: # Dummy meshtal class to run
+class Meshtal:
+    "This is just a Dummy meshtal class with the mesh"
     def __init__(self, ibins, jbins, kbins, geom="XYZ"):
         iints = ibins.size - 1
         jints = jbins.size - 1
@@ -30,16 +31,11 @@ class Meshtal: # Dummy meshtal class to run
 
 def is_between(n1, n2, n):
     # Check if n is STRICTLY between n1 and n2, regardless of which one is greater.
-    if n1 < n < n2:
-        return True
-    if n2 < n < n1:
-        return True
-    else:
-        return False
+    return (n1 < n < n2) or (n2 < n < n1)
 
 def __cyl_raytracer(p1, p2, mesh, ncell=0):
-    """Take a ray from array p1 to array p2 and add the contribution to a cylindrical mesh
-    The vector the points define MUST be parallel to the axis, and the mesh must have
+    """Take a ray from numpy array p1 to numpy array p2 and add the contribution to a cylindrical
+    mesh. The vector the points define MUST be parallel to the axis, and the mesh must have
     normalized axis and vec"""
     line = p2 -p1
     if (np.cross(line, mesh.axis)/(np.linalg.norm(line)) > 1E-5).any():
@@ -62,16 +58,14 @@ def __cyl_raytracer(p1, p2, mesh, ncell=0):
     h1 = max(mesh.jbins[0], min(h1, mesh.jbins[-1]))  # limit h1 and h2 to the mesh
     h2 = max(mesh.jbins[0], min(h2, mesh.jbins[-1]))
     if h1>h2:  # turn around if vector is counter-parallel to axis
-        aux = h1
-        h1 = h2
-        h2 = aux
+        h1, h2 = h2, h1
     elif h1 == h2:
         return None, None
     hindex1 = np.searchsorted(mesh.jbins, h1, side="right")-1
     hindex2 = np.searchsorted(mesh.jbins, h2)-1
     index = np.zeros((4, hindex2-hindex1+1), dtype="int32")
     index[0,:] = rindex
-    index[1,:] = [i for i in range(hindex1, hindex2+1)]
+    index[1,:] = list(range(hindex1, hindex2+1))
     index[2,:] = tindex
     index[3,:] = ncell
     cdists = np.diff(mesh.jbins[hindex1+1:hindex2+1], prepend=h1, append=h2)
@@ -116,7 +110,7 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
     # cplanes = col_planes1 + col_planes2 + col_planes3
     cdists = np.array(col_dists1 + col_dists2 + col_dists3 + [np.linalg.norm(line)])
     index_dist = np.argsort(cdists)
-    
+
 # Build direction matrix. Not very elegant TBH
     cdir = np.zeros((index_dist.size, 3), dtype=int)
     ni = len(col_dists1)
@@ -215,7 +209,7 @@ def postprocess_rays(init_points, final_points, cells, inf_distance=1000):
     r2 = []
     print("postprocessing ray list")
     for i, point in tqdm.tqdm(enumerate(final_points), unit ="rays", position=0, unit_scale=True):
-        if (point == None).all():
+        if (point is None).all():
             if (final_points[i-1] == init_points[i]).all():  # tracable ray
                 direction = final_points[i-1] - init_points[i-1]
                 r0.append(init_points[i])
@@ -233,7 +227,7 @@ def postprocess_rays(init_points, final_points, cells, inf_distance=1000):
 
 
 def trace_list(initp, finalp, cells, mesh):
-    """ helper function that takes init points, final points, and cells arrays, and returns a 
+    """ helper function that takes init points, final points, and cells arrays, and returns a
     sparse matrix with the tracing in mesh. Notice that the list should be limited in length
     as no chunking is performed"""
     ncells = max(cells)
@@ -248,7 +242,7 @@ def trace_list(initp, finalp, cells, mesh):
                 for k in a[j]:
                     index[j].append(k)
             for j in b:
-                 data.append(j)
+                data.append(j)
     s = sparse.COO(index, data, shape= (mesh.iints, mesh.jints, mesh.kints, ncells+1))
     return s
 
@@ -294,7 +288,7 @@ def test2(ptrac_file, cores=None, chunksize=10000):
     nchunks = len(meshes)
     print("Tracing chunks of {0} rays".format(chunksize))
     with Pool(cores) as p:
-         s0 = p.starmap(trace_list, tqdm.tqdm(starargs, total=nchunks), chunksize=1)
-         # s0 = p.imap_unordered(do_work, starargs)
+        s0 = p.starmap(trace_list, tqdm.tqdm(starargs, total=nchunks), chunksize=1)
+        # s0 = p.imap_unordered(do_work, starargs)
     s = sum(s0)
     return s
