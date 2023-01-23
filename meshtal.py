@@ -357,17 +357,17 @@ def fgettally(tallystr):
         for (i, j, k) in np.ndindex(iints, jints, kints):
             line = next(data)
             try: # to avoid ValueError: could not convert string to float: because MCNP doesn't truncate small numbers
-                tally.value[i, j, k, e+1] = line.split()[-2]
-                tally.error[i, j, k, e+1] = line.split()[-1]
+                tally.value[i, j, k, e] = line.split()[-2]
+                tally.error[i, j, k, e] = line.split()[-1]
             except ValueError:
-                tally.value[i, j, k, e+1] = 0.0
-                tally.error[i, j, k, e+1] = 0.0
+                tally.value[i, j, k, e] = 0.0
+                tally.error[i, j, k, e] = 0.0
     # We now have the values for the energy bins, but we are missing the totals.
     # This changes depending on wether we have
     # a single energy bin (eints=1) or more
     if eints == 1:
-        tally.value[:, :, :, 0] = tally.value[:, :, :, 1]
-        tally.error[:, :, :, 0] = tally.error[:, :, :, 1]
+        tally.value[:, :, :, 1] = tally.value[:, :, :, 0]
+        tally.error[:, :, :, 1] = tally.error[:, :, :, 0]
     if Ttype == "Cyl":
         tally.geom = "Cyl"
         tally.origin = [float(l) for l in location[0:3]]
@@ -496,7 +496,8 @@ def tgetall(tfile):
             iints = tallylist[tally].iints
             jints = tallylist[tally].jints
             kints = tallylist[tally].kints
-            value, error = np.zeros((iints, jints, kints))
+            value = np.zeros((iints, jints, kints))
+            error = np.zeros((iints, jints, kints))
 
 # Added by OGM to re-orient TMESH. Hackish but working?
             if tallylist[tally].geom=="Cyl":
@@ -1375,37 +1376,38 @@ def SEAM(*meshtalarray):
         return None
     for meshtal in meshtalarray:
         if meshtal.modID!=basetally.modID:
-            print('BIG FAT WARNING: Non-matching model ID found. Make sure you know what you are doing, if you do not, IT IS NOT MY PROBLEM!')
+            print('BIG FAT WARNING: Non-matching model ID found. Make sure you'
+                  'know what you are doing, if you do not, IT IS NOT MY PROBLEM!')
     result = copy(basetally, exclude=['value', 'error', 'nps'])
     
-    nps = sum([tally.nps for tally in meshtalarray])
+    nps = sum(tally.nps for tally in meshtalarray)
     result.nps = nps
   
     # Now the results and errors
-    for i in range(basetally.iints):
-        for j in range(basetally.jints):
-            for k in range(basetally.kints): 
-                for e in range(basetally.eints+1): 
-                    print(i, j, k, e)
-                    errors = [tally.error[i, j, k, e] for tally in meshtalarray]
-                    values = [tally.value[i, j, k, e] for tally in meshtalarray]
-                    w=[]
-                    if sum(values)==0:
-                        result.value[i, j, k, e] = 0
-                        result.error[i, j, k, e] = 0
-                        continue
-                    minerror = min(filter(lambda i: i >0,[errors]))
-                    for tally in meshtalarray:
-                        if tally.error[i , j, k, e]==0:
-                            w0 = 0
-                        elif minerror<0.1:
-                            if tally.error[i , j, k, e]>0.5:
-                                w0 = 0
-                            else:
-                                w0 = (minerror/tally.error[i, j, k, e])**2
-                        else:
-                            w0 = (minerror/tally.error[i, j, k, e])**2
-                        w.append(w0)
-                    result.value[i, j, k, e] = np.dot(w, errors)/sum(w)
-                    result.error[i, j, k, e] = minerror
+    voxels = np.nditer(range(basetally.iints), range(basetally.jints),
+                       range(basetally.kints), range(basetally.eints+1))
+    with voxels:
+        for (i, j, k, e) in voxels:
+            print(i, j, k, e)
+            errors = [tally.error[i, j, k, e] for tally in meshtalarray]
+            values = [tally.value[i, j, k, e] for tally in meshtalarray]
+            w=[]
+            if sum(values)==0:
+                result.value[i, j, k, e] = 0
+                result.error[i, j, k, e] = 0
+                continue
+            minerror = min(filter(lambda i: i >0,[errors]))
+            for tally in meshtalarray:
+                if tally.error[i , j, k, e]==0:
+                    w0 = 0
+                elif minerror<0.1:
+                    if tally.error[i , j, k, e]>0.5:
+                        w0 = 0
+                    else:
+                        w0 = (minerror/tally.error[i, j, k, e])**2
+                else:
+                    w0 = (minerror/tally.error[i, j, k, e])**2
+                w.append(w0)
+            result.value[i, j, k, e] = np.dot(w, errors)/sum(w)
+            result.error[i, j, k, e] = minerror
     return result
