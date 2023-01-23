@@ -151,13 +151,16 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
     return index, cdists
 
 def raytracer(p1, p2, mesh, ncell=0):
+    if not isinstance(p1, np.ndarray) or not isinstance(p2, np.ndarray):
+        raise TypeError("only numpy arrays con be used as points")
+    if any(np.size(p1), np.size(p2)) != 3:
+        raise IndexError("points don't have 3 dimensions")
     if mesh.geom=="XYZ":
         return __xyz_raytracer(p1, p2, mesh, ncell)
-    elif mesh.geom=="Cyl":
+    if mesh.geom=="Cyl":
         return __cyl_raytracer(p1, p2, mesh, ncell)
-    else:
-        print("unknown geometry type")
-        return None
+    print("unknown geometry type")
+    return None
 
 def get_rays(ptrac_file):
     """
