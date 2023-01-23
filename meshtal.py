@@ -227,7 +227,7 @@ class MeshTally:
                 for j in range(self.jints):
                     Z = (self.jbins[j]+self.jbins[j+1])/2
                     for k in range(self.kints):
-                        Theta = (self.kbins[k]+self.kbins[k+1])/2 # in degrees better for CFD guys
+                        Theta = (self.kbins[k]+self.kbins[k+1])/2
                         XYZ.append(R*(XVEC*cos(2*pi*Theta)+YVEC*sin(2*pi*Theta))+Z*AXS+self.origin)
         else:
             for i in range(self.iints):
@@ -453,14 +453,14 @@ def tgetall(tfile):
         valores = lines.split()
         ntallies = int(valores[0]) # Nº tallies
         VMCNP = valores[2]
-        print(ntallies, " tallies found calculated using MCNP", VMCNP)
+        print(ntallies, " tallies found in file {0}.".format(tfile))
         nps = valores[-1] # Should be NPS problem
         tallylist = []
         for tally in range(ntallies):
             UFO1 = meshtalfile.readline() # TODO: What is that?
             lines = meshtalfile.readline()
             valores = lines.split()
-            print(int(valores[0]))
+#            print(int(valores[0]))
             if int( valores[0]) // 10 == 1:
                 GEOM = "XYZ"
             elif int(valores[0]) // 10 == 2:
@@ -492,7 +492,7 @@ def tgetall(tfile):
 
         UFO3 = meshtalfile.readline()
         for tally in range(ntallies):
-            print("getting tally", tally)
+            print("Getting tally ID number = {0}".format(tallylist[tally].n))
             iints = tallylist[tally].iints
             jints = tallylist[tally].jints
             kints = tallylist[tally].kints
@@ -679,11 +679,11 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
             VTKFile.write('DATASET RECTILINEAR_GRID\n')
             VTKFile.write(f'DIMENSIONS {meshtal.iints+1} {meshtal.jints+1} '+
                           f'{meshtal.kints+1}\n')
-            VTKFile.write(f'X_COORDINATES {meshtal.iints+1}\n')
+            VTKFile.write(f'X_COORDINATES {meshtal.iints+1} float\n')
             VTKFile.writelines([f"{i}\n" for i in meshtal.ibins])
-            VTKFile.write(f'Y_COORDINATES {meshtal.jints+1}\n')
+            VTKFile.write(f'Y_COORDINATES {meshtal.jints+1} float\n')
             VTKFile.writelines([f"{i}\n" for i in meshtal.jbins])
-            VTKFile.write(f'Z_COORDINATES {meshtal.kints+1}\n')
+            VTKFile.write(f'Z_COORDINATES {meshtal.kints+1} float\n')
             VTKFile.writelines([f"{i}\n" for i in meshtal.kbins])
             value = [meshtal.value[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
             error = [meshtal.error[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
