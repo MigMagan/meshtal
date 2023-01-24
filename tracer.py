@@ -82,9 +82,7 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
     sides = ["left" if u<0 else "right" for u in uvw]
     direction = [int(i) for i in np.sign(uvw)]
     ijk0 = [np.searchsorted(bins[i], p1[i], side=sides[i])- 1 for i in range(3)]
-    col_dists1 = []
-    col_dists2 = []
-    col_dists3 = []
+    col_dists = [[] for _ in range(3)]
     for i in range(3):
         if uvw[i] !=0:
             col_dists[i] = np.array([(x-p1[i]) for x in bins[i] if is_between(p2[i], p1[i], i)]) 
@@ -254,6 +252,7 @@ def test(n):
 
 def test2(ptrac_file, cores=None, chunksize=10000):
     initp, finalp, cells = get_rays(ptrac_file)
+    initp, finalp, cells = postprocess_rays(initp, finalp, cells)
     ibins = np.arange(-110,591,10)
     jbins = np.arange(-100,101,10)
     kbins = np.arange(-100,101,10)
