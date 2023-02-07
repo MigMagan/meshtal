@@ -85,7 +85,7 @@ def __xyz_raytracer(p1, p2, mesh, ncell=0):
     col_dists = [[] for _ in range(3)]
     for i in range(3):
         if uvw[i] !=0:
-            col_dists[i] = np.array([(x-p1[i]) for x in bins[i] if is_between(p2[i], p1[i], i)]) 
+            col_dists[i] = np.array([(x-p1[i]) for x in bins[i] if is_between(p2[i], p1[i], x)]) 
             col_dists[i]/=uvw[i]
     # cplanes = col_planes1 + col_planes2 + col_planes3
     cdists = np.concatenate((col_dists[0], col_dists[1], col_dists[2], [np.linalg.norm(line)]))
