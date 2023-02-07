@@ -249,19 +249,16 @@ def ptrac_ray_trace(tally, ptrac_file, pformat="bin", chunksize=10000, cores=Non
         mesh.axis = tally.axis
         mesh.vec = tally.vec
     rays = len(cells)
-    steps = rays // chunksize +2  # We want a minimum of 2 steps even if rays<chunksize
 # Divide the lists into Chunks
-    n = np.linspace(0, rays-1, steps, dtype=int)
-    init_chunk = [initp[j:n[i+1]] for i, j in enumerate(n[:-1])]
-    final_chunk = [finalp[j:n[i+1]] for i, j in enumerate(n[:-1])]
-    cell_chunk = [cells[j:n[i+1]] for i, j in enumerate(n[:-1])]
-    meshes = [mesh for _ in enumerate(n[:-1])]
-    starargs = zip(init_chunk, final_chunk, cell_chunk, meshes)
-    nchunks = len(meshes)
+    steps = rays // chunksize +2
+    init1 = np.array_split(initp, steps)
+    final1 = np.array_split(finalp, steps)
+    cells1 = np.array_split(cells, steps)
+    starargs = [[init1[i], final1[i], cells1[i], mesh] for i in range(steps)]
     print("Tracing chunks of {0} rays".format(chunksize))
     with Pool(cores) as p:
-        s0 = p.starmap(tracer.trace_list, tqdm(starargs, total=nchunks), chunksize=1)
-        # s0 = p.imap_unordered(do_work, starargs)
+        s0 = p.starmap(tracer.trace_list, tqdm(starargs, total=steps))
+        # s0 = p.imap_unordered(tracer.trace_list, tqdm(starargs, total=nchunks))
     # Pad so that all matrix has the same size
     maxncells = max([s.shape[3] for s in s0])
     s1 = [sparse.pad(s, [(0, 0), (0, 0), (0, 0), (0, maxncells-s.shape[3])]) for s in s0]
