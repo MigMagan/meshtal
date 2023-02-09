@@ -2,6 +2,12 @@
 " A test for our ptrac ray tracer"
 __author__       =  "Miguel Magan"
 
+<<<<<<< HEAD
+import numpy as np
+import sparse
+# from pyne import mcnp
+=======
+>>>>>>> 1609555b9ec34258f49c8a4d4d624bdf3e15d140
 from multiprocessing import Pool
 import tqdm
 from tqdm.contrib import tzip
