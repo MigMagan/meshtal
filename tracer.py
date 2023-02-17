@@ -2,12 +2,9 @@
 " A test for our ptrac ray tracer"
 __author__       =  "Miguel Magan"
 
-<<<<<<< HEAD
 import numpy as np
 import sparse
-# from pyne import mcnp
-=======
->>>>>>> 1609555b9ec34258f49c8a4d4d624bdf3e15d140
+from pyne import mcnp
 from multiprocessing import Pool
 import tqdm
 from tqdm.contrib import tzip
@@ -197,8 +194,8 @@ def postprocess_rays(init_points, final_points, cells, inf_distance=1000):
     print("postprocessing ray list")
     for i, point in tqdm.tqdm(enumerate(final_points), unit ="rays", position=0, unit_scale=True):
         if not point.all():
-            if (final_points[i-1] == init_points[i]).all():  # tracable ray
-                direction = final_points[i-1] - init_points[i-1]
+            direction = final_points[i-1] - init_points[i-1]
+            if not direction.all() == 0:  # tracable ray
                 r0.append(init_points[i])
                 r1.append(init_points[i]+direction*inf_distance/np.linalg.norm(direction))
                 r2.append(cells[i])
