@@ -379,7 +379,7 @@ def fgettally(tallystr):
     return tally
 
 
-def fget(n, infile='meshtal'):
+def fget(infile,n):
     """ Get tally number n from meshtal file. """
     header = fgetheader(infile)
     with open(infile, "r", encoding="utf-8") as MeshtalFile:
