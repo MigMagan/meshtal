@@ -63,7 +63,7 @@ def test_raytrace():
 
 
     m = meshtal.fget(4)
-    ro = -ptrac.romesh(m, "ptrac_ray_bin", "outp", method="raytrace", pformat="bin")
+    ro = -ptrac.romesh(m, "ptrac_ray_bin", "outp", method="raytrace", pformat="bin")[0]
     report(ro)
 
 
@@ -72,5 +72,5 @@ def test_pointsample():
     , and plot some statistics"""
 
     m = meshtal.fget(4)
-    ro = -ptrac.romesh(m, "ptrac_src_bin", "outp", pformat="bin")
+    ro = -ptrac.romesh(m, "ptrac_src_bin", "outp", pformat="bin")[0]
     report(ro)
