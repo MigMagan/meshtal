@@ -5,7 +5,7 @@
 """
 import numpy as np
 from tqdm import tqdm
-# from pyne import mcnp
+from pyne import mcnp
 import sparse
 import meshtal as mt
 import cell
