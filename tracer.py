@@ -193,6 +193,8 @@ def postprocess_rays(init_points, final_points, cells, inf_distance=1000):
         if not point.all():
             if (final_points[i-1] == init_points[i]).all():  # tracable ray
                 direction = final_points[i-1] - init_points[i-1]
+                if (direction == 0).all():
+                    continue  # remove degenerate ray
                 r0.append(init_points[i])
                 r1.append(init_points[i]+direction*inf_distance/np.linalg.norm(direction))
                 r2.append(cells[i])
