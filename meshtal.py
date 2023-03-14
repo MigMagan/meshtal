@@ -52,8 +52,8 @@ class MeshTally:
         self.probID = "No problem ID provided"
         self.geom = geom
         self.origin = np.zeros(3)  # Default origin is 0,0,0
-        self.TR = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1],
-                            [0, 0, 0]])  # Tally transformation
+        self.TR = np.array([[0, 0, 0], [1.0, 0, 0], [0, 1.0, 0],
+                            [0, 0, 1.0]])  # Tally transformation
         self.n = 4  # Tally number
         self.FM = 1  # Tally multiplier. I don't know how to treat this, actually...
         self.comment = 'no comment provided'  # Tally comment
@@ -705,9 +705,9 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
         #Let's define a point matrix, where each component is an array [X,Y,Z]
         points = np.zeros((meshtal.iints+1, meshtal.jints+1, kints+1), dtype=(float, 3))
 # Make the transformation of axis, origin and vec according to TR
-        AXS = np.matmul(meshtal.axis, meshtal.TR[0:3].T)
-        VEC = np.matmul(meshtal.vec, meshtal.TR[0:3].T)
-        origin = np.matmul(meshtal.origin, meshtal.TR[0:3].T +meshtal.TR[3])
+        AXS = np.matmul(meshtal.axis, meshtal.TR[1:4].T)
+        VEC = np.matmul(meshtal.vec, meshtal.TR[1:4].T)
+        origin = np.matmul(meshtal.origin, meshtal.TR[1:4].T +meshtal.TR[0])
         YVEC = np.cross(AXS, VEC)
         for j, jbin in enumerate(meshtal.jbins):
             for k, kbin in enumerate(kbins):
