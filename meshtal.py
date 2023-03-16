@@ -1,7 +1,10 @@
 """Mesh tally module."""
 
+import os
+import re
 from math import cos, sin, pi, sqrt, atan2
 import numpy as np
+from mc2acab import MCNP_outparser
 # from pylab import *
 
 # Particles dictionary
@@ -436,6 +439,42 @@ def fgetall(infile='meshtal'):
         tallylist[-1].probID = header['probID']
     return tallylist
 
+def fget_complete(meshID, meshinfile='meshtal', outpinfile='outp'):
+    ''' find the meshtally of interest and return it 
+    Check and complete mesh info, includes FM function and TR from outp'''
+    while not os.path.exists(meshinfile):
+        meshinfile = input('meshtal file not found! Enter meshtal file name: ')
+    mesh = fget(meshID, meshinfile)
+    while not isinstance(mesh, MeshTally):
+        print('fmesh not found... check number... Meshtallies found: ', flist(meshinfile))
+        meshID = int(input('Indicates the fmesh number that you want to use: '))
+        mesh = fget(meshID, meshinfile)
+    while not os.path.exists(outpinfile):
+        outpinfile = input('outp file not found! Enter outp file name: ')
+    in_outp = MCNP_outparser.input_finder(outpinfile)
+    #find FM and TR
+    TRn = 0
+    for i, line in enumerate(in_outp):
+        if re.match(f"fm{meshID}", line, re.IGNORECASE):
+            mesh.FM = MCNP_outparser.line_parser(line)[1:]
+        if re.match(f'fmesh{meshID}', line, re.IGNORECASE):
+            l_fmesh = i
+            while True:
+                tokens = MCNP_outparser.line_parser(in_outp[l_fmesh])
+                tokens = [t.lower() for t in tokens]
+                try:
+                    j = tokens.index('tr')
+                    TRn = int(tokens[j+1])
+                    break
+                except ValueError:
+                    l_fmesh+=1
+                if not in_outp[l_fmesh].startswith((' '*5, 'c', 'C')):
+                    break
+    mesh.TR = MCNP_outparser.get_TR(TRn, outpinfile)
+    # Mesh quality check
+    HR = HealthReport(mesh)
+    HR.health_check()
+    return mesh
 
 def tgetall(tfile, rotate=True):
     """ Get all the mesh tallies from the gridconv file tfile"""
