@@ -633,6 +633,18 @@ class HealthReport:
                 print(colr.color("{0:.2%} voxels are below {1:.2F} error\n",
                       fore=(redvalue, greenvalue, 0)).format(ratio, j))
 
+    def health_check(self):
+        '''Evaluate the quality of and generates a warning it the quality of the mesh is low'''
+        print('FMESH health analysis')
+        bad_frac = 1 - self.fractionbelowE(0.2)
+        if bad_frac > 0.1:
+            bad_voxels = round(self.nvox*bad_frac)
+            print('WARNING!!! ', bad_voxels, ' voxel of ', self.nvox,
+                  ' with high error (>20%) WARNING!!!')
+            return
+        print("Health check passed")
+        return
+
 
     def ploterrorhist(self, ebin=0):
         """Plot the cumulative fraction of voxels below error for ebint. Experimental for now"""
