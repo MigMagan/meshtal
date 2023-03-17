@@ -651,13 +651,13 @@ class HealthReport:
         except ImportError:
             print("colr module not found, fancy output deactivated")
             colour=False
-        minval = self.val[0].min()
-        maxval = self.val[0].max()
+        minval = self.val[-1].min()
+        maxval = self.val[-1].max()
         print(f"Maximum value is {maxval:E}\n")
         print(f"Minimum value is {minval:E}\n")
         print(f"Minimum good value is {self.mingoodval(thresolds[0]):E} \n")
         print(f"Minimum relevant value is {self.mingoodval(thresolds[1]):E} \n")
-        print(f"Tally nonzero elements are {len(self.val[0])/self.nvox:.2%}\n")
+        print(f"Tally nonzero elements are {len(self.val[-1])/self.nvox:.2%}\n")
         for i, j in enumerate(thresolds):
             ratio = self.fractionbelowE(j)
             if not colour:
