@@ -615,7 +615,7 @@ class HealthReport:
         self.ebins = meshtally.ebins
 
 
-    def mingoodval(self, minerror, ebin=0):
+    def mingoodval(self, minerror, ebin=-1):
         if not isinstance(ebin, int):
             print("ebin provided not an integer number")
             return None
@@ -629,7 +629,7 @@ class HealthReport:
         return None  # No voxels with good enough error
 
 
-    def fractionbelowE(self, minerror, ebin=0):
+    def fractionbelowE(self, minerror, ebin=-1):
         if not isinstance(ebin, int):
             print("ebin provided not an integer number")
             return None
