@@ -805,19 +805,20 @@ def ecollapse(meshtal, ebinmap):
     if sum(ebinmap) != meshtal.eints:
         print("energy bin map does not match mesh tally energy bins, cancelling")
         return
-    result = copy(meshtal, exclude=['error', 'value', 'ebins'])
-    result.eints = len(ebinmap)-1
+    eints = len(ebinmap)
+    result = MeshTally(meshtal.iints, meshtal.jints, meshtal.kints, eints)
+    (result.ibins, result.jbins, result.kbins) = (meshtal.ibins, meshtal.jbins, meshtal.kbins)
     energies = np.zeros(result.eints+1) # ebin for new tally
     energies[0] = meshtal.ebins[0]
     pos = 0 # position we are reading in the ebins vector
     for e, ebinblock in enumerate(ebinmap):
         pos = pos+ebinblock
-        energies[e] = meshtal.ebins[pos]
-
-    pos = 1 # reset position to bin 1. bin 0 is total, remember!!!!
+        energies[e+1] = meshtal.ebins[pos]
+    result.ebins = energies
+    pos = 0 # reset position to bin 0. bin -1 is total, remember!!!!
     for e, ebin in enumerate(ebinmap):
         addval = np.sum(meshtal.value[:, :, :, pos:(pos+ebin)], axis=-1)
-        result.value[:, :, :, e+1] = addval
+        result.value[:, :, :, e] = addval
         arrayadderr = [meshtal.value[:, :, :, e0]**2*meshtal.error[:, :, :,e0]**2
                        for e0 in range(pos,pos+ebinmap[e])]
         addvaldiv = np.where(addval!=0, addval, 1)  # We do this to avoid dividing by zero for blank values
@@ -825,8 +826,8 @@ def ecollapse(meshtal, ebinmap):
         result.error[:, :, :, e+1] = adderr
         pos = pos+ebinmap[e]  # Move to next block of energy bins.
 
-    result.value[:, :, :, 0] = meshtal.value[:, :, :, 0]  # Total does not change
-    result.error[:, :, :, 0] = meshtal.error[:, :, :, 0]  # Total does not change
+    result.value[:, :, :, -1] = meshtal.value[:, :, :, -1]  # Total does not change
+    result.error[:, :, :, -1] = meshtal.error[:, :, :, -1]  # Total does not change
     result.comment = "{A}, with collapsed energies as {B}".format(A=meshtal.comment[:-1], B=ebinmap)
     return result
 
