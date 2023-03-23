@@ -9,7 +9,7 @@ from pyne import mcnp
 import sparse
 import meshtal as mt
 from mc2acab import cell
-import meshtal.tracer as tracer
+import tracer 
 
 def read_ptrac_head(ptrac_file):
     """Read and return the headers of an open ASCII ptrac file, ptrac_file"""
