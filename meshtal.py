@@ -58,7 +58,7 @@ class MeshTally:
         self.TR = np.array([[0, 0, 0], [1.0, 0, 0], [0, 1.0, 0],
                             [0, 0, 1.0]])  # Tally transformation
         self.n = 4  # Tally number
-        self.FM = 1  # Tally multiplier. I don't know how to treat this, actually...
+        self.FM = [1]  # Tally multiplier, should be a token list
         self.comment = 'no comment provided'  # Tally comment
         if self.geom == "Cyl":
             self.axis = np.array([0, 0, 1])  # Axis
