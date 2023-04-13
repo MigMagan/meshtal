@@ -440,7 +440,7 @@ def fgetall(infile='meshtal'):
     return tallylist
 
 def fget_complete(meshID, meshinfile='meshtal', outpinfile='outp'):
-    ''' find the meshtally of interest and return it 
+    ''' find the meshtally of interest and return it
     Check and complete mesh info, includes FM function and TR from outp'''
     while not os.path.exists(meshinfile):
         meshinfile = input('meshtal file not found! Enter meshtal file name: ')
@@ -1409,11 +1409,11 @@ def ww_get(infile='wwinp'):
 #      tally.origin=[x0,y0,z0]
 #      print('cylindrical wwinp, not developed... sorry')
 #      return
-#      
+#
 #
 #   print(tally.geom,tally.iints,tally.jints,tally.kints,tally.eints)
-##   print(tally.ibins, tally.jbins, tally.kbins,tally.ebins) 
-#   
+##   print(tally.ibins, tally.jbins, tally.kbins,tally.ebins)
+#
 #   mt.vtkwrite(tally,infile+'.vtk')
 #
 ##   print(coarseimesh,coarsejmesh,coarsekmesh,nwg)
@@ -1421,14 +1421,14 @@ def ww_get(infile='wwinp'):
 
 
 def SEAM(*meshtalarray):
-    """Smart Error Aware Merger. Merges mesh tallies in meshtalarray giving different weight 
+    """Smart Error Aware Merger. Merges mesh tallies in meshtalarray giving different weight
     to the results according to their statistical error. For instance, if one of the tallies has
     very good statistic in one voxel (say below 0.05), and the other tallies are poor (over 0.5),
     the result will be the one from the first tally. Exact methodology to be discussed and set.
     Highly experimental. May provide wrong results, eat your ice cream or set your house on fire
     Use at your own risk.
     """
-    basetally=meshtalarray[0] # More or less as the MCNP tool. 
+    basetally=meshtalarray[0] # More or less as the MCNP tool.
     if not Geoeq(*meshtalarray):
         print('Tallys do not match and heterogeneous tally merging is not implemented. Sorry')
         return None
@@ -1437,10 +1437,10 @@ def SEAM(*meshtalarray):
             print('BIG FAT WARNING: Non-matching model ID found. Make sure you'
                   'know what you are doing, if you do not, IT IS NOT MY PROBLEM!')
     result = copy(basetally, exclude=['value', 'error', 'nps'])
-    
+
     nps = sum(tally.nps for tally in meshtalarray)
     result.nps = nps
-  
+
     # Now the results and errors
     voxels = np.nditer(range(basetally.iints), range(basetally.jints),
                        range(basetally.kints), range(basetally.eints+1))
