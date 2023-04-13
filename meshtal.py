@@ -678,8 +678,12 @@ class HealthReport:
         bad_frac = 1 - self.fractionbelowE(0.2)
         if bad_frac > 0.1:
             bad_voxels = round(self.nvox*bad_frac)
-            print('WARNING!!! ', bad_voxels, ' voxel of ', self.nvox,
-                  ' with high error (>20%) WARNING!!!')
+            zero_voxels = self.nvox - np.count_nonzero(0 < self.err[-1])
+            print(f'WARNING!!! {bad_voxels} voxels of {self.nvox} ({100*bad_voxels/self.nvox:.2f}%) '
+                  'with high error (>20%) WARNING!!!')
+            print(f'WARNING!!! {bad_voxels-zero_voxels} voxels of {len(self.val[-1])} non-zero '
+                  f'voxels ({100*(bad_voxels-zero_voxels)/len(self.val[-1]):.2f}%) '
+                  'with high error (>20%) WARNING!!!')
             return
         print("Health check passed")
         return
