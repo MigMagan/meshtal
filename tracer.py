@@ -33,7 +33,7 @@ def is_between(n1, n2, n):
     # Check if n is STRICTLY between n1 and n2, regardless of which one is greater.
     return (n1 < n < n2) or (n2 < n < n1)
 
-def __cyl_raytracer(p1, p2, mesh, ncell=0):
+def __cyl_raytracer(p1, p2, mesh, ncell=0, verbose=False):
     """Take a ray from numpy array p1 to numpy array p2 and add the contribution to a cylindrical
     mesh. The vector the points define MUST be parallel to the axis, and the mesh must have
     normalized axis and vec"""
@@ -46,9 +46,10 @@ def __cyl_raytracer(p1, p2, mesh, ncell=0):
     yvec = np.cross(mesh.axis, mesh.vec)
     rvec = p0 - mesh.axis*np.dot(p0, mesh.axis)
     r = np.linalg.norm(rvec)
-    if r> mesh.ibins[-1] or r<mesh.ibins[0]:
-        print("ray traced outside of mesh")
-        return None, None
+    if verbose == True:
+        if r> mesh.ibins[-1] or r<mesh.ibins[0]:
+            print("ray traced outside of mesh")
+            return None, None
     t = atan2(np.dot(rvec, yvec), np.dot(rvec,mesh.vec)) % (2*pi)
     t = t/ (2*pi) # To have it in revolutions
     rindex = np.searchsorted(mesh.ibins, r)-1
@@ -136,7 +137,7 @@ def raytracer(p1, p2, mesh, ncell=0):
     if mesh.geom=="XYZ":
         return __xyz_raytracer(p1, p2, mesh, ncell)
     if mesh.geom=="Cyl":
-        return __cyl_raytracer(p1, p2, mesh, ncell)
+        return __cyl_raytracer(p1, p2, mesh, ncell, verbose = False)
     print("unknown geometry type")
     return None
 
