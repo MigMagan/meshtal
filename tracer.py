@@ -46,10 +46,10 @@ def __cyl_raytracer(p1, p2, mesh, ncell=0, verbose=False):
     yvec = np.cross(mesh.axis, mesh.vec)
     rvec = p0 - mesh.axis*np.dot(p0, mesh.axis)
     r = np.linalg.norm(rvec)
-    if verbose == True:
-        if r> mesh.ibins[-1] or r<mesh.ibins[0]:
+    if r> mesh.ibins[-1] or r<mesh.ibins[0]:
+        if verbose == True:
             print("ray traced outside of mesh")
-            return None, None
+        return None, None
     t = atan2(np.dot(rvec, yvec), np.dot(rvec,mesh.vec)) % (2*pi)
     t = t/ (2*pi) # To have it in revolutions
     rindex = np.searchsorted(mesh.ibins, r)-1
