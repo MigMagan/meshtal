@@ -737,11 +737,11 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
             VTKFile.write(f'DIMENSIONS {meshtal.iints+1} {meshtal.jints+1} '+
                           f'{meshtal.kints+1}\n')
             VTKFile.write(f'X_COORDINATES {meshtal.iints+1} float\n')
-            VTKFile.writelines([f"{i}\n" for i in meshtal.ibins])
+            VTKFile.writelines([f"{i+meshtal.TR[0][0]}\n" for i in meshtal.ibins])
             VTKFile.write(f'Y_COORDINATES {meshtal.jints+1} float\n')
-            VTKFile.writelines([f"{i}\n" for i in meshtal.jbins])
+            VTKFile.writelines([f"{i+meshtal.TR[0][1]}\n" for i in meshtal.jbins])
             VTKFile.write(f'Z_COORDINATES {meshtal.kints+1} float\n')
-            VTKFile.writelines([f"{i}\n" for i in meshtal.kbins])
+            VTKFile.writelines([f"{i+meshtal.TR[0][2]}\n" for i in meshtal.kbins])
             value = [meshtal.value[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
             error = [meshtal.error[:, :, :, e].flatten(order="F") for e in range(meshtal.eints+1)]
 
