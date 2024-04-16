@@ -240,6 +240,10 @@ class MeshTally:
                     for k in range(self.kints):
                         Z = (self.kbins[k]+self.kbins[k+1])/2
                         XYZ.append([X,Y,Z]+self.origin)
+        #Avoid artifacts make zero any value lower than 1E-12 cm
+        for i, j in np.ndindex(np.asarray(xyz103).shape):
+            if abs(xyz103[i][j]) < 1E-12 :
+                xyz103[i][j] = 0.0
         return XYZ
 # ======================= END OF CLASS DEFINITION ==========================
 
