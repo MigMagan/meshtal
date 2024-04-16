@@ -1010,10 +1010,13 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
         wmin = np.ones(len(tallies))*wmin
 
     top_cap = kwargs.get("top_cap", 0)
+# TODO make and ID that works with multi particle wwinp (TODO + think about top_cap)
     if top_cap == 0:
-        wwinpID = ("{0:>5.2f} {1:5.1E} {2:}".format(scale[0], wmin[0], "nocap"))
+        wwinpID = ("{0} {1} {2}".format('_'.join(['{0:.1f}'.format(s) for s in scale]),
+                                                    '_'.join(['{0:.1E}'.format(s) for s in wmin]), "nocap"))
     else:
-        wwinpID = ("{0:>5.2f} {1:5.1E} {2:5.0E}".format(scale[0], wmin[0], top_cap))
+        wwinpID = ("{0} {1} {2}".format('_'.join(['{0:.1f}'.format(s) for s in scale]),
+                                                    '_'.join(['{0:.1E}'.format(s) for s in wmin]), top_cap))
 
 # A litte explanation on this: Due to the WWINP format, we need to transform the bins into
 # a coarse mesh with homogeneous fine divisions inside.
