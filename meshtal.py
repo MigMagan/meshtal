@@ -242,8 +242,8 @@ class MeshTally:
                         XYZ.append([X,Y,Z]+self.origin)
         #Avoid artifacts make zero any value lower than 1E-12 cm
         for i, j in np.ndindex(np.asarray(xyz103).shape):
-            if abs(xyz103[i][j]) < 1E-12 :
-                xyz103[i][j] = 0.0
+            if abs(XYZ[i][j]) < 1E-12 :
+                XYZ[i][j] = 0.0
         return XYZ
 # ======================= END OF CLASS DEFINITION ==========================
 
