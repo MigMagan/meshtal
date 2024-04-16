@@ -608,10 +608,11 @@ class HealthReport:
         self.err = [None]*(meshtally.eints+1)
         for energy in range(meshtally.eints+1):
             self.val[energy] = np.array([v for v in meshtally.value[:, :, :, energy].flatten()
-                                         if v > 0])
+                                        if v > 0])
             self.err[energy] = np.array([e for e in meshtally.error[:, :, :, energy].flatten()
-                                         if e > 0])
-        self.nvox = meshtally.iints*meshtally.jints*meshtally.kints
+                                        if e > 0])
+        # TODO: cuando i,j,kints = 0 significa que es un solo voxel, no 0
+        self.nvox = (meshtally.iints+1)*(meshtally.jints+1)*(meshtally.kints+1)
         self.ebins = meshtally.ebins
 
 
@@ -669,7 +670,7 @@ class HealthReport:
                 else:
                     redvalue = 1275*(1-ratio)
                     greenvalue = 255
-                print(colr.color("{0:.2%} voxels are below {1:.2F} error\n",
+                print(colr.color("{0:.2%} voxels are below {1:.2F} error",
                       fore=(redvalue, greenvalue, 0)).format(ratio, j))
 
     def health_check(self):
