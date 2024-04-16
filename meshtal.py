@@ -288,11 +288,11 @@ def fgettally(tallystr):
         print("Dose function:", line)
         line = next(data)
     line = next(data)
- # TODO: Apparently, Tally multipliers are here, but I don't have a good one
+# TODO: Apparently, Tally multipliers are here, but I don't have a good one
     if line != ' Tally bin boundaries:\n':
         print(line)
         print("Uh, uh, tally boundaries not found.\
-              Quitting, because this is not really what I expected")
+                Quitting, because this is not really what I expected")
         return None
     line = next(data)
     words = line.split()
@@ -326,7 +326,7 @@ def fgettally(tallystr):
         kbinlist = words[3:]
     else:
         print("Tally does not seem rectangular nor cylindrical.\
-               Quitting because I don't know what is this...")
+                Quitting because I don't know what is this...")
         return None
 
     kbins = [float(k) for k in kbinlist]
@@ -346,7 +346,7 @@ def fgettally(tallystr):
     tally.n = int(n)
     next(data)
     line = next(data)  # Assert this is going as intended TODO: Support
-                             # for time tallies is possible!
+                        # for time tallies is possible!
     header = line.split()
     if Ttype == "XYZ":
         assert header[-4] == 'Z'
@@ -671,7 +671,7 @@ class HealthReport:
                     redvalue = 1275*(1-ratio)
                     greenvalue = 255
                 print(colr.color("{0:.2%} voxels are below {1:.2F} error",
-                      fore=(redvalue, greenvalue, 0)).format(ratio, j))
+                        fore=(redvalue, greenvalue, 0)).format(ratio, j))
 
     def health_check(self):
         '''Evaluate the quality of and generates a warning it the quality of the mesh is low'''
@@ -681,10 +681,10 @@ class HealthReport:
             bad_voxels = round(self.nvox*bad_frac)
             zero_voxels = self.nvox - np.count_nonzero(0 < self.err[-1])
             print(f'WARNING!!! {bad_voxels} voxels of {self.nvox} ({100*bad_voxels/self.nvox:.2f}%) '
-                  'with high error (>20%) WARNING!!!')
+                    'with high error (>20%) WARNING!!!')
             print(f'WARNING!!! {bad_voxels-zero_voxels} voxels of {len(self.val[-1])} non-zero '
-                  f'voxels ({100*(bad_voxels-zero_voxels)/len(self.val[-1]):.2f}%) '
-                  'with high error (>20%) WARNING!!!')
+                    f'voxels ({100*(bad_voxels-zero_voxels)/len(self.val[-1]):.2f}%) '
+                    'with high error (>20%) WARNING!!!')
             return
         print("Health check passed")
         return
@@ -730,14 +730,14 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
     vtk_name = ofile.rstrip(".vtk")
     with open(ofile,"w", encoding="utf-8") as VTKFile:
         VTKFile.write(f'# vtk DataFile Version 3.0\n'
-                      f'{meshtal.probID} vtk output\n'
-                      f'ASCII\n')
+                        f'{meshtal.probID} vtk output\n'
+                        f'ASCII\n')
     if meshtal.geom == "XYZ":
         nvoxels = meshtal.iints * meshtal.jints * meshtal.kints  # Total number of voxels
         with open(ofile,"a", encoding="utf-8") as VTKFile:
             VTKFile.write('DATASET RECTILINEAR_GRID\n')
             VTKFile.write(f'DIMENSIONS {meshtal.iints+1} {meshtal.jints+1} '+
-                          f'{meshtal.kints+1}\n')
+                            f'{meshtal.kints+1}\n')
             VTKFile.write(f'X_COORDINATES {meshtal.iints+1} float\n')
             VTKFile.writelines([f"{i+meshtal.TR[0][0]}\n" for i in meshtal.ibins])
             VTKFile.write(f'Y_COORDINATES {meshtal.jints+1} float\n')
@@ -804,9 +804,9 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
 
 def ecollapse(meshtal, ebinmap):
     """Collapses the energy groups in meshtal acording to integer list
-       or array ebinmap.
-       WARNING: Error calculations are mere aproximation. Information is lost in
-       the process and the actual error CAN NOT be calculated
+        or array ebinmap.
+        WARNING: Error calculations are mere aproximation. Information is lost in
+        the process and the actual error CAN NOT be calculated
     """
     if sum(ebinmap) != meshtal.eints:
         print("energy bin map does not match mesh tally energy bins, cancelling")
@@ -826,7 +826,7 @@ def ecollapse(meshtal, ebinmap):
         addval = np.sum(meshtal.value[:, :, :, pos:(pos+ebin)], axis=-1)
         result.value[:, :, :, e] = addval
         arrayadderr = [meshtal.value[:, :, :, e0]**2*meshtal.error[:, :, :,e0]**2
-                       for e0 in range(pos,pos+ebinmap[e])]
+                        for e0 in range(pos,pos+ebinmap[e])]
         addvaldiv = np.where(addval!=0, addval, 1)  # We do this to avoid dividing by zero for blank values
         adderr = np.sqrt(np.sum(arrayadderr, axis=0)/(addvaldiv**2))
         result.error[:, :, :, e+1] = adderr
@@ -847,7 +847,7 @@ def merge(*meshtalarray):
     for meshtal in meshtalarray:
         if meshtal.modID!=basetally.modID:
             print('BIG FAT WARNING: Non-matching model ID found. Make sure you know what you\
-                  are doing, if you do not, IT IS NOT MY PROBLEM!')
+                    are doing, if you do not, IT IS NOT MY PROBLEM!')
     result = copy(basetally, exclude=['value', 'error', 'nps'])
     nps = sum(tally.nps  for tally in meshtalarray)
     result.nps = nps
@@ -889,7 +889,7 @@ def voxelmerge(meshtal, voxelmap):
         for j in range(2):
             if not voxelmap[i, j].is_integer():
                 print("WARNING: voxelmap value not integer at index {i},{j}. This is not fatal to\
-                      the method, but something smells fishy here".format(i=i,j=j))
+                        the method, but something smells fishy here".format(i=i,j=j))
 
     ii = voxelmap[0].astype(int)
     jj = voxelmap[1].astype(int)
@@ -929,7 +929,7 @@ def xyzput(tally,ofile, writezeros=True):
         for i, voxel in enumerate(val):
             if writezeros==True or voxel!=0:
                 putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
-                                                         voxel, err[i]))
+                                                        voxel, err[i]))
 
 
 def multixyzput(tallylist,ofile, writezeros=True):
@@ -945,7 +945,7 @@ def multixyzput(tallylist,ofile, writezeros=True):
             for i, voxel in enumerate(val):
                 if writezeros==True or voxel!=0:
                     putfile.write("{0} {1} {2} {3} {4}\n".format(XYZ[i][0], XYZ[i][1], XYZ[i][2],
-                                                             voxel, err[i]))
+                                                            voxel, err[i]))
 
 def fput(tallylist,ofile):
     """Write a meshtal file ofile with the data of tallylist. ProbID and nps MUST match"""
@@ -967,11 +967,11 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
         Mind you, currently time dependency is NOT supported.
     """
 
-   # Preliminary checks:
+    # Preliminary checks:
     for tally in tallies[1:]:
         if tally.part == tallies[0].part:
             print("tally type collision detected: At least two tallies are of the same particles.\
-                  Please check your inputs. Quitting")
+                    Please check your inputs. Quitting")
             return
     if not Geoeq(*tallies):
         print("Tallies do not match geometrically. Quitting")
@@ -988,7 +988,7 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
             scale[i] = h.fractionbelowE(0.1)/h.fractionbelowE(1)
             if scale[i] == 0:
                 print("Tally #{0} has nothing below threshold uncertainty.\
-                      Please manually provide scaling values".format(i))
+                        Please manually provide scaling values".format(i))
                 return
             print("Scale for tally{0} :{1}\n".format(i,scale[i]))
     if not hasattr(scale,'len'):
@@ -1002,7 +1002,7 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
             midval = h.mingoodval(0.1)
             if midval == 0:
                 print("Tally #{0} has nothing below threshold uncertainty. \
-                      Please manually provide scaling values".format(i))
+                        Please manually provide scaling values".format(i))
                 return
             wmin[i] = (midval/maxval) ** scale[i]
             print("Minimal weight for tally{0}: {1:.3E}\n".format(i,wmin[i]))
@@ -1075,12 +1075,12 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
 
         #array of tally location:
         wwfile.write("{0:>13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n".
-                     format(tally.iints,tally.jints,tally.kints,x0,y0,z0))
+                    format(tally.iints,tally.jints,tally.kints,x0,y0,z0))
 
         if igeom==10:  #remember, cartesian
             wwfile.write("{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}\n".format(len(coarseimesh)-1,
-                                                                         len(coarsejmesh)-1,
-                                                                         len(coarsekmesh)-1, nwg))
+                                                                        len(coarsejmesh)-1,
+                                                                        len(coarsekmesh)-1, nwg))
         else: # cylindrical
             [x1, y1, z1] = [x0, y0, z0] +tally.axis*(tally.jbins[-1] - tally.jbins[0])
             [x2, y2, z2] = [x0, y0, z0] +tally.vec*(tally.jbins[-1] - tally.jbins[0])
@@ -1227,7 +1227,7 @@ def conv_Cilindricas_multi(Axs,Vec,origin,XYZ):   #TODO: Should use the above fu
         j = j+1
         if (j+1)% 1e5==0:
             print (j+1,' transformed points')
-   #         print (Transformed[:-1])
+#         print (Transformed[:-1])
     return Transformed
 
 
@@ -1440,7 +1440,7 @@ def SEAM(*meshtalarray):
     for meshtal in meshtalarray:
         if meshtal.modID!=basetally.modID:
             print('BIG FAT WARNING: Non-matching model ID found. Make sure you'
-                  'know what you are doing, if you do not, IT IS NOT MY PROBLEM!')
+                    'know what you are doing, if you do not, IT IS NOT MY PROBLEM!')
     result = copy(basetally, exclude=['value', 'error', 'nps'])
 
     nps = sum(tally.nps for tally in meshtalarray)
@@ -1448,7 +1448,7 @@ def SEAM(*meshtalarray):
 
     # Now the results and errors
     voxels = np.nditer(range(basetally.iints), range(basetally.jints),
-                       range(basetally.kints), range(basetally.eints+1))
+                        range(basetally.kints), range(basetally.eints+1))
     with voxels:
         for (i, j, k, e) in voxels:
             print(i, j, k, e)
