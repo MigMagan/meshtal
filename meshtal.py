@@ -241,7 +241,7 @@ class MeshTally:
                         Z = (self.kbins[k]+self.kbins[k+1])/2
                         XYZ.append([X,Y,Z]+self.origin)
         #Avoid artifacts make zero any value lower than 1E-12 cm
-        for i, j in np.ndindex(np.asarray(xyz103).shape):
+        for i, j in np.ndindex(np.asarray(XYZ).shape):
             if abs(XYZ[i][j]) < 1E-12 :
                 XYZ[i][j] = 0.0
         return XYZ
