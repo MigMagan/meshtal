@@ -472,8 +472,8 @@ def fget_complete(meshID, meshinfile='meshtal', outpinfile='outp'):
                     break
     mesh.TR = MCNP_outparser.get_TR(TRn, outpinfile)
     # Mesh quality check
-    HR = HealthReport(mesh)
-    HR.health_check()
+    # HR = HealthReport(mesh)
+    # HR.health_check()
     return mesh
 
 def tgetall(tfile, rotate=True):
@@ -653,15 +653,15 @@ class HealthReport:
             colour=False
         minval = self.val[-1].min()
         maxval = self.val[-1].max()
-        print(f"Maximum value is {maxval:E}\n")
-        print(f"Minimum value is {minval:E}\n")
-        print(f"Minimum good value is {self.mingoodval(thresolds[0]):E} \n")
-        print(f"Minimum relevant value is {self.mingoodval(thresolds[1]):E} \n")
-        print(f"Tally nonzero elements are {len(self.val[-1])/self.nvox:.2%}\n")
+        print(f"Maximum value is {maxval:E}")
+        print(f"Minimum value is {minval:E}")
+        print(f"Minimum good value is {self.mingoodval(thresolds[0]):E}")
+        print(f"Minimum relevant value is {self.mingoodval(thresolds[1]):E}")
+        print(f"Tally nonzero elements are {len(self.val[-1])/self.nvox:.2%}")
         for i, j in enumerate(thresolds):
             ratio = self.fractionbelowE(j)
             if not colour:
-                print(f"{ratio:.2%} voxels are below {j:.2F} error\n")
+                print(f"{ratio:.2%} voxels are below {j:.2F} error")
             else:
                 if ratio<0.8:
                     redvalue = 255
@@ -698,6 +698,7 @@ class HealthReport:
         plt.title("Error histogram for tally")
         plt.grid(True)
         plt.hist(self.err[ebin], cumulative=True, density=True, bins=nbins)
+        plt.show()
 ########################## END OF CLASS DEFINITION #############################################
 
 
@@ -1021,7 +1022,7 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
     coarsejmesh = [tally.jbins[0]]
     coarsekmesh = [tally.kbins[0]]
     npart = max(IPT[tally.part] for tally in tallies)
-    print(npart)
+    # print(npart)
 
     bins = [tally.ibins, tally.jbins, tally.kbins]
     coarses = [coarseimesh, coarsejmesh, coarsekmesh]
@@ -1037,12 +1038,12 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
         coarse.append(mesh[-1])
 
 #lets check
-    print('fineiints', fineiints)
-    print('finejints', finejints)
-    print('finekints', finekints)
-    print('coarseimesh', coarseimesh)
-    print('coarsejmesh', coarsejmesh)
-    print('coarsekmesh', coarsekmesh)
+    # print('fineiints', fineiints)
+    # print('finejints', finejints)
+    # print('finekints', finekints)
+    # print('coarseimesh', coarseimesh)
+    # print('coarsejmesh', coarsejmesh)
+    # print('coarsekmesh', coarsekmesh)
 
     with open(ofile,"w", encoding="utf-8") as wwfile:
 
@@ -1062,7 +1063,7 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
         for tally in tallies:
             ne[IPT[tally.part]-1] = tally.eints
         # Second line, energies per particle types
-        print(ne)
+        # print(ne)
         for i, nei in enumerate(ne):
             wwfile.write("{:>10n}".format(nei))
             if (i+1) % 7 == 0 or i+1 == len(ne):
@@ -1090,7 +1091,7 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
                 mesharray.append(coarse[i+1])
                 mesharray.append(1)
 
-            print('The mesh array is', mesharray)
+            # print('The mesh array is', mesharray)
             for i in range(0,len(mesharray)-6, 6):
                 wwfile.write(''.join('{0:13.5E}{1:13.5E}{2:13.5E}{3:13.5E}{4:13.5E}{5:13.5E}\n'.format(*mesharray[i:i+6])))
             remains = np.mod(len(mesharray), 6) # the number of last elements of mesharray
