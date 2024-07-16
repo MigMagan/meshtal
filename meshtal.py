@@ -660,8 +660,12 @@ class HealthReport:
         maxval = self.val[-1].max()
         print(f"Maximum value is {maxval:E}")
         print(f"Minimum value is {minval:E}")
-        print(f"Minimum good value is {self.mingoodval(thresolds[0]):E}")
-        print(f"Minimum relevant value is {self.mingoodval(thresolds[1]):E}")
+        if self.mingoodval(thresolds[0]) != None:
+            print(f"Minimum good value is {self.mingoodval(thresolds[0]):E}")
+        if self.mingoodval(thresolds[1]) != None:
+            print(f"Minimum relevant value is {self.mingoodval(thresolds[1]):E}")
+        else:
+            print('WARNING No good/relevant values!!!')
         print(f"Tally nonzero elements are {len(self.val[-1])/self.nvox:.2%}")
         for i, j in enumerate(thresolds):
             ratio = self.fractionbelowE(j)
