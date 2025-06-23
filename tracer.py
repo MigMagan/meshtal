@@ -38,7 +38,7 @@ def __cyl_raytracer(p1, p2, mesh, ncell=0, verbose=False):
     mesh. The vector the points define MUST be parallel to the axis, and the mesh must have
     normalized axis and vec"""
     line = p2 -p1
-    if (np.cross(line, mesh.axis)/(np.linalg.norm(line)) > 1E-5).any():
+    if (np.cross(line, mesh.axis)/(np.linalg.norm(line)) > 1E-5).any() and verbose == True:
         print ("For ray tracing in cylindrical mesh, rays must be parallel to axis!")
         return None, None
 #   Calculate non-changing Ro and Theta
