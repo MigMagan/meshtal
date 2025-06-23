@@ -2,7 +2,7 @@
 
 import os
 import re
-from math import cos, sin, pi, sqrt, atan2
+from math import cos, sin, pi, sqrt, atan2, floor
 import numpy as np
 from mc2acab import MCNP_outparser
 # from pylab import *
@@ -273,6 +273,7 @@ def fgetheader(infile='meshtal'):
 
 def fgettally(tallystr):
     """Auxiliary to get the tally data from string tallystr"""
+    ebins_is_nuclide = False
     data = iter(tallystr)
     line = next(data)
     n = line.split()[-1]
@@ -290,6 +291,13 @@ def fgettally(tallystr):
     line = next(data) # This is the line where it should say if it has a dose function
     if line == ' This mesh tally is modified by a dose response function.\n':
         print("Dose function:", line)
+        line = next(data)
+    elif line == " This mesh tally is a photon source tally.\n":
+        print("Source tally found")
+        line = next(data)
+    if line.startswith(" Energy binning is used as"):
+        print(line)
+        ebins_is_nuclide = True
         line = next(data)
     line = next(data)
 # TODO: Apparently, Tally multipliers are here, but I don't have a good one
@@ -341,6 +349,9 @@ def fgettally(tallystr):
     ebinlist = words[3:]
     ebins = [float(e) for e in ebinlist]
     eints = len(ebins)-1
+    if ebins_is_nuclide:
+        ebins = [floor(e) for e in ebins]
+        eints+=1
     tally = MeshTally(iints, jints, kints, eints)
     tally.ibins = np.array(ibins)
     tally.jbins = np.array(jbins)
@@ -798,16 +809,23 @@ def vtkwrite(meshtal, ofile, maxangle=1/6):
         VTKFile.write('CELL_DATA {N}\n'.format(N=nvoxels))
         VTKFile.write('FIELD FieldData {N} \n'.format(N=NFields))
         VTKFile.write('TotalTally_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
-        VTKFile.write(' '.join("%s" % v for v in value[0])+'\n')
+        VTKFile.write(' '.join("%s" % v for v in value[-1])+'\n')
         VTKFile.write('TotalError_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, N=nvoxels))
-        VTKFile.write(' '.join("%s" % e for e in error[0])+'\n')
+        VTKFile.write(' '.join("%s" % e for e in error[-1])+'\n')
 
         if meshtal.eints > 1:
-            for e in range(1, meshtal.eints+1):
-                VTKFile.write('Tally{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
-                VTKFile.write(' '.join("%s" % v for v in value[e])+'\n')
-                VTKFile.write('Error{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
-                VTKFile.write(' '.join("%s" % e for e in error[e])+'\n')
+            if meshtal.eints == len(meshtal.ebins):  # Ebins are discrete values (cells or nuclides)
+                for e in range(1, meshtal.eints+1):
+                    VTKFile.write('Tally_{E1}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], N=nvoxels))
+                    VTKFile.write(' '.join("%s" % v for v in value[e-1])+'\n')
+                    VTKFile.write('Error_{E1}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], N=nvoxels))
+                    VTKFile.write(' '.join("%s" % e for e in error[e-1])+'\n')
+            else:
+                for e in range(1, meshtal.eints+1):  # Ebins are ranges
+                    VTKFile.write('Tally_{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
+                    VTKFile.write(' '.join("%s" % v for v in value[e])+'\n')
+                    VTKFile.write('Error_{E1}-{E2}_{vtkname} 1 {N} float\n'.format(vtkname=vtk_name, E1=meshtal.ebins[e-1], E2=meshtal.ebins[e], N=nvoxels))
+                    VTKFile.write(' '.join("%s" % e for e in error[e])+'\n')
 
 
 def ecollapse(meshtal, ebinmap):
