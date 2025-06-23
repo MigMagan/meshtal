@@ -359,6 +359,7 @@ def fgettally(tallystr):
     tally.ebins = np.array(ebins)
     tally.part = particle
     tally.n = int(n)
+    tally.comment = comment
     next(data)
     line = next(data)  # Assert this is going as intended TODO: Support
                         # for time tallies is possible!
