@@ -1039,10 +1039,10 @@ def wwrite(*tallies, ofile='wwout', scale=None, wmin=None, **kwargs):
     top_cap = kwargs.get("top_cap", 0)
 # TODO make and ID that works with multi particle wwinp (TODO + think about top_cap)
     if top_cap == 0:
-        wwinpID = ("{0} {1} {2}".format('_'.join(['{0:.1f}'.format(s) for s in scale]),
-                                                    '_'.join(['{0:.1E}'.format(s) for s in wmin]), "nocap"))
+        wwinpID = ("{0} {1} {2}".format('_'.join(['{0:.2f}'.format(s) for s in scale]),
+                                                    '_'.join(['{0:.1E}'.format(s) for s in wmin]), "noca"))
     else:
-        wwinpID = ("{0} {1} {2}".format('_'.join(['{0:.1f}'.format(s) for s in scale]),
+        wwinpID = ("{0} {1} {2}".format('_'.join(['{0:.2f}'.format(s) for s in scale]),
                                                     '_'.join(['{0:.1E}'.format(s) for s in wmin]), top_cap))
 
 # A litte explanation on this: Due to the WWINP format, we need to transform the bins into
