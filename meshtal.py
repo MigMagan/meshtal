@@ -1271,8 +1271,10 @@ def add(tallylist):
             w.append(w0)
         if (Result.value[i, j, k, e] != 0):
             Result.error[i, j, k, e] = sqrt(sum(w)/pow(Result.value[i, j, k, e], 2))
+            Result.error[i, j, k, -1] = sqrt(sum(w)/pow(Result.value[i, j, k, e], 2))
         else:
             Result.error[i, j, k, e] = 0
+            Result.error[i, j, k, -1] = 0
     Result.nps = totnps
     return Result
 
